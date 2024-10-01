@@ -60,23 +60,23 @@ and generate JWT Tokens for users.
 
 ### Keycloak Configuration
 
-Current configuration of Keycloak Roles, Users, Clients is depicted in the following images.
+Current configuration of Keycloak Roles, User Attributes, Clients and Realm Roles is depicted in the following images.
 
 #### Groups
 
-![Keyckoak Groups](https://github.com/Modapto/user-manager/blob/main/images/Groups.jpg?raw=true)
+![Keycloak Groups](../../blob/main/images/Groups.jpg)
 
 #### Realm Roles
 
-![Keyckoak Realm Roles](https://github.com/Modapto/user-manager/blob/main/images/Realm_Roles.jpg?raw=true)
+![Keycloak Realm Roles](../../blob/main/images/Realm_Roles.jpg)
 
 #### User Attributes
 
-![Keyckoak User Attributes](https://github.com/Modapto/user-manager/blob/main/images/User_Attributes.jpg?raw=true)
+![Keycloak User Attributes](../../blob/main/images/User_Attributes.jpg)
 
 #### Client Roles
 
-![Keyckoak Client Roles](https://github.com/Modapto/user-manager/blob/main/images/Client_Roles.jpg?raw=true)
+![Keycloak Client Roles](../../blob/main/images/Client_Roles.jpg)
 
 
 ### Deployment
