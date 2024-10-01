@@ -1,0 +1,24 @@
+image: maven:3.9.9-eclipse-temurin-21
+
+definitions:
+  steps:
+    - step: &build-step
+        name: SonarQube analysis
+        caches:
+          - maven
+          - sonar
+        script:
+          - mvn verify sonar:sonar -Dtest=!**/*IntegrationTests -Dsonar.host.url=${SONAR_HOST} -Dsonar.token=${SONAR_TOKEN} -Dsonar.projectKey=atc-code_modapto-user-manager_AZIj8SyEUMdWI-F3kkWl -Dsonar.projectName=modapto-user-manager
+        runs-on:
+          - self.hosted
+          - ilab
+  caches:
+    sonar: ~/.sonar
+
+clone:
+  depth: full
+
+pipelines:
+  pull-requests:
+    '**': #this runs as default for any branch not elsewhere defined
+      - step: *build-step
