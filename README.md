@@ -64,19 +64,19 @@ Current configuration of Keycloak Roles, User Attributes, Clients and Realm Role
 
 #### Groups
 
-![Keycloak Groups](../../blob/main/images/Groups.jpg)
+![Keycloak Groups](../../blob/main/images/Groups.png)
 
 #### Realm Roles
 
-![Keycloak Realm Roles](../../blob/main/images/Realm_Roles.jpg)
+![Keycloak Realm Roles](../../blob/main/images/Realm_Roles.png)
 
 #### User Attributes
 
-![Keycloak User Attributes](../../blob/main/images/User_Attributes.jpg)
+![Keycloak User Attributes](../../blob/main/images/User_Attributes.png)
 
 #### Client Roles
 
-![Keycloak Client Roles](../../blob/main/images/Client_Roles.jpg)
+![Keycloak Client Roles](../../blob/main/images/Client_Roles.png)
 
 
 ### Deployment
