@@ -36,9 +36,6 @@ build/
 ### LOCAL DEC ###
 test.json
 src/main/resources/static/index.html
-
-.env
-/data
 src/main/resources/application-local.properties
 notes.txt
 sonar-analysis.txt
