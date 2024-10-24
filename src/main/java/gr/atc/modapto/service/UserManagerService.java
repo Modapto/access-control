@@ -474,7 +474,8 @@ public class UserManagerService implements IUserManagerService {
      * @param userId : ID of user
      * @return Void
      */
-    @Async
+    @Async("asyncPoolTaskExecutor")
+    @Override
     public CompletableFuture<Void> assignRealmRoles(String pilotRole, String userId, String token) {
         return CompletableFuture.runAsync(() -> {
             try{
@@ -557,7 +558,8 @@ public class UserManagerService implements IUserManagerService {
      * @param userId : ID of user
      * @return Void
      */
-    @Async
+    @Async("asyncPoolTaskExecutor")
+    @Override
     public CompletableFuture<Void> assignRealmManagementRoles(String pilotRole, String userId, String token) {
         return CompletableFuture.runAsync(() -> {
             try {
@@ -606,7 +608,7 @@ public class UserManagerService implements IUserManagerService {
      * @return Void
      */
     @Override
-    @Async
+    @Async("asyncPoolTaskExecutor")
     public CompletableFuture<Void> logoutUser(String userId, String token) {
         return CompletableFuture.runAsync(() -> {
             try {
@@ -638,6 +640,50 @@ public class UserManagerService implements IUserManagerService {
     }
 
     /**
+     * Retrieve all users with a specific role from Keycloak
+     *
+     * @param realmRole: User Role
+     * @param tokenValue: JWT Token value
+     * @return List<UserDTO>
+     */
+    @Override
+    public List<UserDTO> fetchUsersByRole(String realmRole, String tokenValue) {
+        try {
+            String clientName = clientId;
+            String clientID = findClientIdPerClient(clientName, tokenValue);
+            if(clientID == null)
+                throw new DataRetrievalException("Unable to locate requested client ID in Keycloak");
+
+            // Set Headers
+            HttpHeaders headers = new HttpHeaders();
+            headers.setBearerAuth(tokenValue);
+            headers.setContentType(MediaType.APPLICATION_JSON);
+
+            HttpEntity<List<UserRepresentationDTO>> entity = new HttpEntity<>(null, headers);
+
+            String requestUri = adminUri.concat("/clients/").concat(clientID).concat("/roles/").concat(realmRole).concat("/users");
+            ResponseEntity<List<UserRepresentationDTO>> response = restTemplate.exchange(
+                    requestUri,
+                    HttpMethod.GET,
+                    entity,
+                    new ParameterizedTypeReference<>() {
+                    }
+            );
+
+            if (response != null && response.getStatusCode().is2xxSuccessful() && response.getBody() != null && !response.getBody().isEmpty())
+                return response.getBody().stream().map(UserRepresentationDTO::toUserDTO).toList();
+
+            return Collections.emptyList();
+        } catch (HttpClientErrorException | HttpServerErrorException e) {
+            log.error("HTTP error during logout of user : {}, Response body: {}", e.getMessage(), e.getResponseBodyAsString(), e);
+            throw new KeycloakException("HTTP error during logout of user", e);
+        } catch (RestClientException e) {
+            log.error("Error during logout of user : {}", e.getMessage(), e);
+            throw new KeycloakException("Error during logout of user", e);
+        }
+    }
+
+    /**
      * Retrieve all corresponding realm-management roles depending on user role
      *e
      * @param pilotRole: Pilot role
@@ -663,7 +709,7 @@ public class UserManagerService implements IUserManagerService {
 
 
             // Assign realm roles according to the Realm Role of User
-            if(response.getStatusCode().is2xxSuccessful() && response.getBody() != null && !response.getBody().isEmpty()){
+            if(response != null && response.getStatusCode().is2xxSuccessful() && response.getBody() != null && !response.getBody().isEmpty()){
                 if (pilotRole.equals(PilotRole.SUPER_ADMIN.toString()))
                     return response.getBody().stream().filter(role -> SUPER_ADMIN_ROLES_MANAGEMENT_ARRAY.stream()
                                     .anyMatch(superAdminRole -> superAdminRole.equalsIgnoreCase(role.getName())))
@@ -715,7 +761,7 @@ public class UserManagerService implements IUserManagerService {
                     new ParameterizedTypeReference<>() {}
             );
 
-            if(response.getStatusCode().is2xxSuccessful() && response.getBody() != null && !response.getBody().isEmpty()){
+            if(response != null && response.getStatusCode().is2xxSuccessful() && response.getBody() != null && !response.getBody().isEmpty()){
                 return Objects.requireNonNull(response.getBody().stream().findFirst().orElse(null)).getId();
             }
 

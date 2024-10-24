@@ -1,6 +1,38 @@
 package gr.atc.modapto.controller;
 
+import java.util.HashMap;
+import java.util.List;
+import java.util.Map;
+import java.util.concurrent.CompletableFuture;
+
+import static org.hamcrest.CoreMatchers.is;
+import org.junit.jupiter.api.BeforeAll;
+import org.junit.jupiter.api.DisplayName;
+import org.junit.jupiter.api.Test;
+import static org.mockito.ArgumentMatchers.any;
+import static org.mockito.ArgumentMatchers.anyString;
+import static org.mockito.BDDMockito.given;
+import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.boot.test.autoconfigure.web.servlet.AutoConfigureMockMvc;
+import org.springframework.boot.test.context.SpringBootTest;
+import org.springframework.boot.test.mock.mockito.MockBean;
+import org.springframework.http.MediaType;
+import org.springframework.security.core.authority.SimpleGrantedAuthority;
+import org.springframework.security.core.context.SecurityContextHolder;
+import org.springframework.security.oauth2.jwt.Jwt;
+import org.springframework.security.oauth2.server.resource.authentication.JwtAuthenticationToken;
+import org.springframework.security.test.context.support.WithMockUser;
+import org.springframework.test.web.servlet.MockMvc;
+import org.springframework.test.web.servlet.ResultActions;
+import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.delete;
+import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.get;
+import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.post;
+import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.put;
+import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.jsonPath;
+import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.status;
+
 import com.fasterxml.jackson.databind.ObjectMapper;
+
 import gr.atc.modapto.dto.AuthenticationResponseDTO;
 import gr.atc.modapto.dto.CredentialsDTO;
 import gr.atc.modapto.dto.UserDTO;
@@ -9,35 +41,8 @@ import gr.atc.modapto.enums.PilotCode;
 import gr.atc.modapto.enums.PilotRole;
 import gr.atc.modapto.enums.UserRole;
 import gr.atc.modapto.service.UserManagerService;
-import org.junit.jupiter.api.BeforeAll;
-import org.junit.jupiter.api.DisplayName;
-import org.junit.jupiter.api.Test;
-import org.springframework.beans.factory.annotation.Autowired;
-import org.springframework.boot.test.autoconfigure.web.servlet.AutoConfigureMockMvc;
-import org.springframework.boot.test.autoconfigure.web.servlet.WebMvcTest;
-import org.springframework.boot.test.mock.mockito.MockBean;
-import org.springframework.http.MediaType;
-import org.springframework.security.core.authority.SimpleGrantedAuthority;
-import org.springframework.security.core.context.SecurityContextHolder;
-import org.springframework.security.oauth2.jwt.Jwt;
-import org.springframework.security.oauth2.server.resource.authentication.JwtAuthenticationToken;
-import org.springframework.security.web.SecurityFilterChain;
-import org.springframework.test.web.servlet.MockMvc;
-import org.springframework.test.web.servlet.ResultActions;
 
-import java.util.HashMap;
-import java.util.List;
-import java.util.Map;
-import java.util.concurrent.CompletableFuture;
-
-import static org.hamcrest.CoreMatchers.is;
-import static org.mockito.ArgumentMatchers.*;
-import static org.mockito.BDDMockito.given;
-import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.*;
-import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.jsonPath;
-import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.status;
-
-@WebMvcTest(UserManagerController.class)
+@SpringBootTest
 @AutoConfigureMockMvc
 class UserManagerControllerTests {
 
@@ -46,9 +51,6 @@ class UserManagerControllerTests {
 
     @MockBean
     private UserManagerService userManagerService;
-
-    @MockBean
-    private SecurityFilterChain securityFilterChain;
 
     @Autowired
     private ObjectMapper objectMapper;
@@ -62,7 +64,7 @@ class UserManagerControllerTests {
     static void setup() {
         credentials = CredentialsDTO.builder()
                 .email("test@test.com")
-                .password("Test@test123@")
+                .password("TestPass123@")
                 .build();
 
         authenticationResponse = AuthenticationResponseDTO.builder()
@@ -74,11 +76,12 @@ class UserManagerControllerTests {
                 .build();
 
         user = UserDTO.builder()
+                .userId("12345")
                 .email("test@test.com")
                 .firstName("Test")
                 .lastName("Test")
                 .username("UserTest")
-                .password("Test@test123@")
+                .password("TestPass123@")
                 .pilotCode(PilotCode.NONE)
                 .pilotRole(PilotRole.NONE)
                 .userRole(UserRole.NONE)
@@ -99,6 +102,7 @@ class UserManagerControllerTests {
 
     }
 
+    @WithMockUser(roles = "SUPER_ADMIN")
     @DisplayName("Authenticate User: Success")
     @Test
     void givenUserCredentials_whenAuthenticate_thenReturnAccessTokens() throws Exception {
@@ -141,7 +145,6 @@ class UserManagerControllerTests {
                         is("Authentication token generated successfully")))
                 .andExpect(jsonPath("$.data.accessToken",
                         is(authenticationResponse.getAccessToken())));
-
     }
 
     @DisplayName("Authenticate User: Invalid Credentials")
@@ -404,6 +407,47 @@ class UserManagerControllerTests {
                 .andExpect(jsonPath("$.message", is("Users retrieved successfully")))
                 .andExpect(jsonPath("$.data[0].email", is("test@test.com")));
     }
+
+    @DisplayName("Fetch User IDs: Success")
+    @Test
+    void givenValidJwt_whenGetAllUserIds_thenReturnListOfUserIds() throws Exception {
+        // Given
+        given(userManagerService.fetchUsers(anyString())).willReturn(List.of(user));
+
+        // Mock JWT authentication
+        JwtAuthenticationToken jwtAuthenticationToken = new JwtAuthenticationToken(jwt, List.of(new SimpleGrantedAuthority("ROLE_ADMIN")));
+        SecurityContextHolder.getContext().setAuthentication(jwtAuthenticationToken);
+
+        // When
+        ResultActions response = mockMvc.perform(get("/api/users/ids").contentType(MediaType.APPLICATION_JSON));
+
+        // Then
+        response.andExpect(status().isOk())
+                .andExpect(jsonPath("$.success", is(true)))
+                .andExpect(jsonPath("$.message", is("User IDs retrieved successfully")))
+                .andExpect(jsonPath("$.data[0]", is("12345")));
+    }
+
+    @DisplayName("Fetch User IDs By Role: Success")
+    @Test
+    void givenValidJwt_whenGetAllUserIdsByUserRole_thenReturnListOfUserIds() throws Exception {
+        // Given
+        given(userManagerService.fetchUsersByRole(anyString(), anyString())).willReturn(List.of(user));
+
+        // Mock JWT authentication
+        JwtAuthenticationToken jwtAuthenticationToken = new JwtAuthenticationToken(jwt, List.of(new SimpleGrantedAuthority("ROLE_ADMIN")));
+        SecurityContextHolder.getContext().setAuthentication(jwtAuthenticationToken);
+
+        // When
+        ResultActions response = mockMvc.perform(get("/api/users/ids/role/OPERATOR").contentType(MediaType.APPLICATION_JSON));
+
+        // Then
+        response.andExpect(status().isOk())
+                .andExpect(jsonPath("$.success", is(true)))
+                .andExpect(jsonPath("$.message", is("User IDs for role OPERATOR retrieved successfully")))
+                .andExpect(jsonPath("$.data[0]", is("12345")));
+    }
+
 
     @DisplayName("Fetch User by ID: Success")
     @Test

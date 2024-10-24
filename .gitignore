@@ -39,3 +39,4 @@ src/main/resources/static/index.html
 src/main/resources/application-local.properties
 notes.txt
 sonar-analysis.txt
+.dockerignore

@@ -9,4 +9,10 @@ public class CustomExceptions {
             super(message, cause);
         }
     }
+
+    public static class DataRetrievalException extends RuntimeException{
+        public DataRetrievalException(String message) {
+            super(message);
+        }
+    }
 }

@@ -2,6 +2,7 @@ services:
   postgres_db:
     image: postgres:${POSTGRES_SERVER_VERSION}
     container_name: postgres_db
+    restart: unless-stopped
     shm_size: 128mb
     env_file: .env
     environment:
@@ -12,12 +13,19 @@ services:
       - ./data/postgres:/var/lib/postgresql/data
     ports:
       - ${POSTGRES_EXPOSE_PORT}:${POSTGRES_SERVER_PORT}
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U ${POSTGRES_USER} -d ${POSTGRES_DB}"]
+      interval: 5s
+      timeout: 10s
+      retries: 20
+      start_period: 15s
     networks:
-      - app-network
+      - keycloak
     
   keycloak:
     image: bitnami/keycloak:${KEYCLOAK_SERVER_VERSION}
     container_name: keycloak
+    restart: unless-stopped
     env_file: .env
     environment:
       - KEYCLOAK_ADMIN_USER=${KEYCLOAK_ADMIN_USER}
@@ -25,20 +33,29 @@ services:
       - KEYCLOAK_DATABASE_VENDOR=${KEYCLOAK_DB_VENDOR}
       - KEYCLOAK_DATABASE_HOST=${KEYCLOAK_DB_HOST}
       - KEYCLOAK_DATABASE_PORT=${KEYCLOAK_DB_PORT}
-      - KEYCLOAK_DATABASE_NAME=${KEYCLOAK_DB_DATABSE}
+      - KEYCLOAK_DATABASE_NAME=${KEYCLOAK_DB_DATABASE}
       - KEYCLOAK_DATABASE_USER=${KEYCLOAK_DB_USER}
       - KEYCLOAK_DATABASE_PASSWORD=${KEYCLOAK_DB_PASS}
       - KEYCLOAK_DB_URL=jdbc:${KEYCLOAK_DB_VENDOR}://localhost:${KEYCLOAK_DB_PORT}/${KEYCLOAK_DB_DATABASE}
     ports:
       - ${KEYCLOAK_EXPOSE_PORT}:${KEYCLOAK_SERVER_PORT}
     depends_on:
-      - postgres_db
+      postgres_db:
+        condition: service_healthy
+    healthcheck:
+      test: ["CMD-SHELL", "curl --fail --silent ${KEYCLOAK_ISSUER_URI} || exit 1"]
+      interval: 5s
+      timeout: 10s
+      retries: 20
+      start_period: 15s
     networks: 
-      - app-network
+      - modapto
+      - keycloak
   
   pgadmin:
     image: dpage/pgadmin4
     container_name: pgadmin
+    restart: unless-stopped
     env_file: .env
     environment:
       - PGADMIN_DEFAULT_EMAIL:${PGADMIN_DEFAULT_EMAIL}
@@ -46,10 +63,40 @@ services:
     ports:
       - 5050:80
     depends_on:
-      - postgres_db
+      postgres_db:
+        condition: service_healthy
     networks:
-      - app-network
+      - keycloak
 
+  user-manager:
+    image: ${APP_IMAGE}
+    container_name: user-manager
+    restart: unless-stopped
+    env_file: .env
+    environment:
+      - SERVER_PORT:${APP_PORT}
+      - KC_URL:${KEYCLOAK_URL}
+      - KC_ISSUER_URI:${KEYCLOAK_ISSUER_URI}
+      - KC_JWK_SET_URI:${KEYCLOAK_JWK_SET_URI}
+      - KC_TOKEN_URI:${KEYCLOAK_TOKEN_URI}
+      - KC_ADMIN_URI:${KEYCLOAK_ADMIN_URI}
+      - KC_CLIENT_ID:${KEYCLOAK_CLIENT_ID}
+      - KC_CLIENT_SECRET:${KEYCLOAK_CLIENT_SECRET}
+      - KC_ADMIN_USERNAME:${KEYCLOAK_ADMIN_USERNAME}
+      - KC_ADMIN_PASSWORD:${KEYCLOAK_ADMIN_PASSWORD}
+      - KC_REALM:${KEYCLOAK_REALM}
+      - KC_AUTH_SERVER:${KEYCLOAK_AUTH_SERVER}
+    ports:
+      - ${APP_PORT}:${APP_PORT}
+    depends_on:
+      keycloak:
+        condition: service_healthy
+    networks:
+      - modapto
+      - keycloak
+    
 networks:
-  app-network:
+  keycloak:
+    driver: bridge
+  modapto:
     driver: bridge

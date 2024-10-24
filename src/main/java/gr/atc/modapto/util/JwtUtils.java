@@ -69,8 +69,8 @@ public class JwtUtils {
 
     /**
      * Util to retrieve pilot role of user from JWT Token
-     * @param jwt Token to extract userId
-     * @return userId
+     * @param jwt Token to extract user role
+     * @return user role
      */
     public static String extractPilotRole(Jwt jwt){
         if (jwt == null || jwt.getClaimAsString(PILOT_ROLE_FIELD) == null) {

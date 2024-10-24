@@ -1,28 +1,38 @@
 package gr.atc.modapto.controller;
 
-import gr.atc.modapto.dto.keycloak.UserRepresentationDTO;
-import gr.atc.modapto.service.IUserManagerService;
-import gr.atc.modapto.util.JwtUtils;
-import io.swagger.v3.oas.annotations.media.Content;
-import io.swagger.v3.oas.annotations.media.Schema;
-import io.swagger.v3.oas.annotations.responses.ApiResponse;
-import io.swagger.v3.oas.annotations.responses.ApiResponses;
-import jakarta.validation.Valid;
+import java.util.List;
+import java.util.concurrent.CompletableFuture;
+
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.security.core.Authentication;
 import org.springframework.security.core.annotation.AuthenticationPrincipal;
 import org.springframework.security.oauth2.jwt.Jwt;
-import org.springframework.web.bind.annotation.*;
+import org.springframework.web.bind.annotation.DeleteMapping;
+import org.springframework.web.bind.annotation.GetMapping;
+import org.springframework.web.bind.annotation.PathVariable;
+import org.springframework.web.bind.annotation.PostMapping;
+import org.springframework.web.bind.annotation.PutMapping;
+import org.springframework.web.bind.annotation.RequestBody;
+import org.springframework.web.bind.annotation.RequestMapping;
+import org.springframework.web.bind.annotation.RequestParam;
+import org.springframework.web.bind.annotation.RestController;
+
 import gr.atc.modapto.dto.AuthenticationResponseDTO;
 import gr.atc.modapto.dto.CredentialsDTO;
 import gr.atc.modapto.dto.UserDTO;
+import gr.atc.modapto.dto.keycloak.UserRepresentationDTO;
+import gr.atc.modapto.service.IUserManagerService;
+import gr.atc.modapto.util.JwtUtils;
+import gr.atc.modapto.validation.ValidUserRole;
+import io.swagger.v3.oas.annotations.media.Content;
+import io.swagger.v3.oas.annotations.media.Schema;
+import io.swagger.v3.oas.annotations.responses.ApiResponse;
+import io.swagger.v3.oas.annotations.responses.ApiResponses;
+import jakarta.validation.Valid;
 import lombok.AllArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
-
-import java.util.List;
-import java.util.concurrent.CompletableFuture;
 
 @RestController
 @AllArgsConstructor
@@ -251,6 +261,43 @@ public class UserManagerController {
         else
             return new ResponseEntity<>(ApiResponseInfo.error("Unable to delete user from Keycloak"),
                     HttpStatus.INTERNAL_SERVER_ERROR);
+    }
+
+    /**
+     * Retrieve all user IDs from Keycloak
+     *
+     * @param jwt: JWT Token
+     * @return List<UserDTO>
+     */
+    @ApiResponses(value = {
+      @ApiResponse(responseCode = "200", description = "User IDs retrieved successfully"),
+      @ApiResponse(responseCode = "400", description = "Invalid request: Either credentials or token must be provided!"),
+      @ApiResponse(responseCode = "400", description = "An unexpected error occured"),
+      @ApiResponse(responseCode = "403", description = "Invalid authorization parameters. Check JWT or CSRF Token"),
+    })
+    @GetMapping("/ids")
+    public ResponseEntity<ApiResponseInfo<List<String>>> getAllUserIds(@AuthenticationPrincipal Jwt jwt) {
+      List<UserDTO> users = userManagerService.fetchUsers(jwt.getTokenValue());
+      return new ResponseEntity<>(ApiResponseInfo.success(users.stream().map(UserDTO::getUserId).toList(), "User IDs retrieved successfully"), HttpStatus.OK);
+    }
+
+    /**
+     * Retrieve all user IDs from Keycloak
+     *
+     * @param jwt: JWT Token
+     * @return List<UserDTO>
+     */
+    @ApiResponses(value = {
+      @ApiResponse(responseCode = "200", description = "User IDs for role retrieved successfully"),
+      @ApiResponse(responseCode = "400", description = "Invalid request: Either credentials or token must be provided!"),
+      @ApiResponse(responseCode = "400", description = "An unexpected error occured"),
+      @ApiResponse(responseCode = "403", description = "Invalid authorization parameters. Check JWT or CSRF Token"),
+            @ApiResponse(responseCode = "500", description = "Unable to locate requested client ID in Keycloak")
+    })
+    @GetMapping("/ids/role/{realmRole}")
+    public ResponseEntity<ApiResponseInfo<List<String>>> getAllUserIdsByUserRole(@AuthenticationPrincipal Jwt jwt, @ValidUserRole @PathVariable String realmRole) {
+      List<UserDTO> users = userManagerService.fetchUsersByRole(realmRole, jwt.getTokenValue());
+      return new ResponseEntity<>(ApiResponseInfo.success(users.stream().map(UserDTO::getUserId).toList(), "User IDs for role " + realmRole + " retrieved successfully"), HttpStatus.OK);
     }
 
     /**

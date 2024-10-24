@@ -34,4 +34,6 @@ public interface IUserManagerService {
   CompletableFuture<Void> assignRealmManagementRoles(String userRole, String userId, String token);
 
   CompletableFuture<Void> logoutUser(String userId, String token);
+
+  List<UserDTO> fetchUsersByRole(String realmRole, String tokenValue);
 }

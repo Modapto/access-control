@@ -5,8 +5,8 @@
 User manager is responsible to handle authentication process inside MODAPTO. It connects with Keycloak and routes all requests to authenticate
 users, refresh tokens, manage users and request information regarding their authorization in the system.
 
-It exploits OAuth2.0 and OpenID protocols integrated with Spring Security with configured Request Filters to increase the security of the application 
-and generate JWT Tokens for users.
+It exploits OAuth2.0 and OpenID protocols integrated with Spring Security with configured Request Filters to increase the security of the application and generate JWT Tokens for users.
+
 ## Table of Contents
 
 1. [Installation](#installation)
@@ -21,8 +21,8 @@ and generate JWT Tokens for users.
 1. Clone the repository:
 
     ```sh
-    git clone https://github.com/Modapto/user-manager.git
-    cd user-manager
+    git clone https://github.com/Modapto/access-control.git
+    cd access-control
     ```
 
 2. Install the dependencies:
@@ -45,7 +45,7 @@ and generate JWT Tokens for users.
    keycloak.realm=${KC_REALM:###}
    keycloak.auth-server-url=${KC_AUTH_SERVER:###}
     ```
-    
+
 ### Usage
 
 1. Run the application after Keycloak is deployed:
@@ -54,9 +54,9 @@ and generate JWT Tokens for users.
     mvn spring-boot:run
     ```
 
-2. The application will start on `http://localhost:8082`.
+2. The application will start on `http://localhost:8093`.
 
-3. Access the OpenAPI documentation at `http://localhost:8082/api/users/swagger-ui/index.html`.
+3. Access the OpenAPI documentation at `http://localhost:8093/api/user-manager/swagger-ui/index.html`.
 
 ### Keycloak Configuration
 
@@ -100,7 +100,7 @@ For local deployment Docker containers can be utilized to deploy the microservic
 4. Run the Docker container including the environmental variables:
 
     ```sh
-    docker run -d -p 8082:8082 --name modapto-user-manager modapto-user-manager
+    docker run -d -p 8093:8093 --name modapto-user-manager modapto-user-manager
     ```
 
 5. To stop container run:

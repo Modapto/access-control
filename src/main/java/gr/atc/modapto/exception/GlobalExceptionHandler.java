@@ -48,6 +48,13 @@ public class GlobalExceptionHandler {
         return new ResponseEntity<>(response, HttpStatus.INTERNAL_SERVER_ERROR);
     }
 
+    @ExceptionHandler(DataRetrievalException.class)
+    @ResponseStatus(HttpStatus.INTERNAL_SERVER_ERROR)
+    public ResponseEntity<ApiResponseInfo<String>> dataRetrievalError(@NotNull DataRetrievalException ex) {
+        ApiResponseInfo<String> response = ApiResponseInfo.error(ex.getMessage(), null);
+        return new ResponseEntity<>(response, HttpStatus.INTERNAL_SERVER_ERROR);
+    }
+
     @ExceptionHandler(Exception.class)
     @ResponseStatus(HttpStatus.INTERNAL_SERVER_ERROR)
     public ResponseEntity<ApiResponseInfo<String>> handleGeneralException(@NotNull Exception ex) {
