@@ -1,6 +1,7 @@
 package gr.atc.modapto.controller;
 
 import gr.atc.modapto.service.AdminService;
+import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.responses.ApiResponse;
 import io.swagger.v3.oas.annotations.responses.ApiResponses;
 import lombok.AllArgsConstructor;
@@ -29,6 +30,7 @@ public class AdminController {
      * @param jwt : JWT Token
      * @return List<String> : List of User Roles
      */
+    @Operation(summary = "Retrieve all user roles from Keycloak")
     @ApiResponses(value = {
             @ApiResponse(responseCode = "200", description = "User roles retrieved successfully"),
             @ApiResponse(responseCode = "400", description = "Invalid request: either credentials or token must be provided!"),
@@ -46,6 +48,7 @@ public class AdminController {
      * @param jwt : JWT Token
      * @return List<String> : List of Pilots
      */
+    @Operation(summary = "Retrieve all pilots from Keycloak")
     @ApiResponses(value = {
             @ApiResponse(responseCode = "200", description = "Pilot codes retrieved successfully"),
             @ApiResponse(responseCode = "400", description = "Invalid request: either credentials or token must be provided!"),
@@ -63,6 +66,7 @@ public class AdminController {
      * @param jwt : JWT Token
      * @return List<String> : List of Pilot Roles
      */
+    @Operation(summary = "Retrieve all pilot roles from Keycloak")
     @ApiResponses(value = {
             @ApiResponse(responseCode = "200", description = "Pilot roles retrieved successfully"),
             @ApiResponse(responseCode = "400", description = "Invalid request: either credentials or token must be provided!"),
@@ -74,6 +78,4 @@ public class AdminController {
     public ResponseEntity<ApiResponseInfo<List<String>>> getAllPilotRoles(@AuthenticationPrincipal Jwt jwt) {
         return new ResponseEntity<>(ApiResponseInfo.success(adminService.retrieveAllPilotRoles(jwt.getTokenValue()), "Pilot roles retrieved successfully"), HttpStatus.OK);
     }
-
-
 }

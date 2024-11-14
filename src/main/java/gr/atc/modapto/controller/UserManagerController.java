@@ -26,6 +26,7 @@ import gr.atc.modapto.dto.keycloak.UserRepresentationDTO;
 import gr.atc.modapto.service.IUserManagerService;
 import gr.atc.modapto.util.JwtUtils;
 import gr.atc.modapto.validation.ValidUserRole;
+import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.media.Content;
 import io.swagger.v3.oas.annotations.media.Schema;
 import io.swagger.v3.oas.annotations.responses.ApiResponse;
@@ -48,6 +49,7 @@ public class UserManagerController {
      * @param credentials -> With email and password
      * @return AuthenticationResponse
      */
+    @Operation(summary = "Authenticate user given credentials or refresh token")
     @ApiResponses(value = {
             @ApiResponse(responseCode = "200", description = "Authentication token generated successfully", content = {
                     @Content(mediaType = "application/json", schema = @Schema(implementation = AuthenticationResponseDTO.class))}),
@@ -87,6 +89,7 @@ public class UserManagerController {
      * @param jwt  : JWT Token
      * @return message of success or failure
      */
+    @Operation(summary = "Logout user")
     @ApiResponses(value = {
             @ApiResponse(responseCode = "200", description = "User logged out successfully"),
             @ApiResponse(responseCode = "400", description = "Invalid request: Either credentials or token must be provided!"),
@@ -111,6 +114,7 @@ public class UserManagerController {
      * @param jwt  : JWT Token
      * @return message of success or failure
      */
+    @Operation(summary = "Create a new user in Keycloak")
     @ApiResponses(value = {
             @ApiResponse(responseCode = "200", description = "User created successfully in Keycloak", content = {
                     @Content(mediaType = "application/json", schema = @Schema(implementation = AuthenticationResponseDTO.class))}),
@@ -157,6 +161,7 @@ public class UserManagerController {
      * @param jwt: JWT Token
      * @return Message of success or failure
      */
+    @Operation(summary = "Update user's information in Keycloak")
     @ApiResponses(value = {
             @ApiResponse(responseCode = "200", description = "User updated successfully"),
             @ApiResponse(responseCode = "400", description = "Invalid request: Either credentials or token must be provided!"),
@@ -181,6 +186,7 @@ public class UserManagerController {
      * @param jwt: JWT Token
      * @return Message of success or failure
      */
+    @Operation(summary = "Change user's password in Keycloak")
     @ApiResponses(value = {
             @ApiResponse(responseCode = "200", description = "User's password updated successfully"),
             @ApiResponse(responseCode = "400", description = "Invalid request: Either credentials or token must be provided!"),
@@ -212,6 +218,7 @@ public class UserManagerController {
      * @param jwt: JWT Token
      * @return List<UserDTO>
      */
+    @Operation(summary = "Retrieve all users from Keycloak")
     @ApiResponses(value = {
             @ApiResponse(responseCode = "200", description = "Users retrieved successfully", content = {
                     @Content(mediaType = "application/json", schema = @Schema(implementation = UserDTO.class))}),
@@ -232,6 +239,7 @@ public class UserManagerController {
      * @param jwt: JWT Token
      * @return UserDTO
      */
+    @Operation(summary = "Search user by ID from Keycloak")
     @ApiResponses(value = {
             @ApiResponse(responseCode = "200", description = "User retrieved successfully", content = {
                     @Content(mediaType = "application/json", schema = @Schema(implementation = UserDTO.class))}),
@@ -252,6 +260,15 @@ public class UserManagerController {
      * @param jwt: JWT Token
      * @return Message of success or failure
      */
+    @Operation(summary = "Delete a user by ID from Keycloak")
+    @ApiResponses(value = {
+            @ApiResponse(responseCode = "200", description = "User deleted successfully", content = {
+                    @Content(mediaType = "application/json", schema = @Schema(implementation = UserDTO.class))}),
+            @ApiResponse(responseCode = "400", description = "Invalid request: Either credentials or token must be provided!"),
+            @ApiResponse(responseCode = "400", description = "An unexpected error occured"),
+            @ApiResponse(responseCode = "403", description = "Invalid authorization parameters. Check JWT or CSRF Token"),
+            @ApiResponse(responseCode = "500", description = "Unable to delete user from Keycloak")
+    })
     @PreAuthorize("hasAuthority('ROLE_SUPER_ADMIN')")
     @DeleteMapping("/delete")
     public ResponseEntity<ApiResponseInfo<String>> deleteUser(@RequestParam String userId, @AuthenticationPrincipal Jwt jwt) {
@@ -269,6 +286,7 @@ public class UserManagerController {
      * @param jwt: JWT Token
      * @return List<UserDTO>
      */
+    @Operation(summary = "Retrieve all user IDs from Keycloak")
     @ApiResponses(value = {
       @ApiResponse(responseCode = "200", description = "User IDs retrieved successfully"),
       @ApiResponse(responseCode = "400", description = "Invalid request: Either credentials or token must be provided!"),
@@ -287,6 +305,7 @@ public class UserManagerController {
      * @param jwt: JWT Token
      * @return List<UserDTO>
      */
+    @Operation(summary = "Retrieve all user IDs from Keycloak")
     @ApiResponses(value = {
       @ApiResponse(responseCode = "200", description = "User IDs for role retrieved successfully"),
       @ApiResponse(responseCode = "400", description = "Invalid request: Either credentials or token must be provided!"),
@@ -306,6 +325,7 @@ public class UserManagerController {
      * @param authentication : JWT token
      * @return authentication information
      */
+    @Operation(summary = "Retrieve Authentication Information based on the JWT token")
     @ApiResponses(value = {
             @ApiResponse(responseCode = "200", description = "Information about Authentication Information based on the JWT token", content = {
                     @Content(mediaType = "application/json", schema = @Schema(implementation = Authentication.class))}),
@@ -350,5 +370,4 @@ public class UserManagerController {
                     return null;
                 });
     }
-
 }

@@ -49,13 +49,13 @@ public class SecurityConfig {
                                 .cors(corsCustomizer -> corsCustomizer.configurationSource(corsConfigurationSource()))
                                 // Configure CSRF Token
                                 .csrf(csrf -> csrf.csrfTokenRequestHandler(requestHandler)
-                                                .ignoringRequestMatchers("/api/users/**", "/api/admin/**") // For now ignore all requests under api/users, and api/admin
+                                                .ignoringRequestMatchers("/api/users/**", "/api/admin/**", "/api/user-manager/**") // For now ignore all requests under api/users, and api/admin
                                                 .csrfTokenRepository(CookieCsrfTokenRepository.withHttpOnlyFalse()))
                                 .addFilterAfter(new CsrfCookieFilter(), BasicAuthenticationFilter.class)
                                 .exceptionHandling(exc -> exc.authenticationEntryPoint(entryPoint))
                                 // HTTP Requests authorization properties on URLs
                                 .authorizeHttpRequests(authorizeRequests -> authorizeRequests
-                                                .requestMatchers("/api/users/authenticate", "/api/users/refresh-token").permitAll()
+                                                .requestMatchers("/api/users/authenticate", "/api/users/refresh-token", "/api/user-manager/**").permitAll()
                                                 .anyRequest().authenticated())
                                 // JWT Authentication Configuration to use with Keycloak
                                 .oauth2ResourceServer(oauth2ResourceServerCustomizer -> oauth2ResourceServerCustomizer
