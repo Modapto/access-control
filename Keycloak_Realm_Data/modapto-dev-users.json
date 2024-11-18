@@ -1,0 +1,61 @@
+{
+  "realm" : "modapto-dev",
+  "users" : [{
+    "id" : "32634eb2-e46f-4c9a-a21a-eccf0d77ebcd",
+    "username" : "crf_user",
+    "firstName" : "CRF",
+    "lastName" : "USER",
+    "email" : "crf@test.com",
+    "emailVerified" : true,
+    "attributes" : {
+      "pilot_type" : [ "USER" ],
+      "pilot" : [ "CRF" ],
+      "pilot_role" : [ "OPERATOR" ]
+    },
+    "createdTimestamp" : 1726492243200,
+    "enabled" : true,
+    "totp" : false,
+    "credentials" : [ {
+      "id" : "5cdfffb5-85e0-4703-ace5-326731e98d94",
+      "type" : "password",
+      "createdDate" : 1727342993648,
+      "secretData" : "{\"value\":\"Kh2DOlg5x6IGK69qqJRV+681UmsRQxae5njba2AYGcnLlJGKj97xCadKuRlXdkTf0wES85snMr+mvtcX0GRnBA==\",\"salt\":\"wzmEYt0DMsJcNunEimSZEg==\",\"additionalParameters\":{}}",
+      "credentialData" : "{\"hashIterations\":210000,\"algorithm\":\"pbkdf2-sha512\",\"additionalParameters\":{}}"
+    } ],
+    "disableableCredentialTypes" : [ ],
+    "requiredActions" : [ ],
+    "realmRoles" : [ "USER" ],
+    "clientRoles" : {
+      "realm-management" : [ "manage-users" ]
+    },
+    "notBefore" : 0,
+    "groups" : [ "/CRF", "/CRF/USER" ]
+  }, {
+    "id" : "a918b329-6111-4a4d-b928-3780b638aa07",
+    "username" : "super_admin",
+    "firstName" : "Admin",
+    "lastName" : "Super",
+    "email" : "superadmin@admin.com",
+    "emailVerified" : true,
+    "createdTimestamp" : 1719578064439,
+    "enabled" : true,
+    "totp" : false,
+    "credentials" : [ {
+      "id" : "06abb7a7-f257-486c-93db-21079baf45d9",
+      "type" : "password",
+      "userLabel" : "My password",
+      "createdDate" : 1726564938631,
+      "secretData" : "{\"value\":\"cucbVjCF83VmKT7aK1j/15AE8sGpCn9EyzX9aFspzOx6V9R5QI9UnlVnkYW+pghjNE4DdwvjjEL0TfdRS7xtgQ==\",\"salt\":\"mKO2kvOBx8yGjKba6vm2ug==\",\"additionalParameters\":{}}",
+      "credentialData" : "{\"hashIterations\":210000,\"algorithm\":\"pbkdf2-sha512\",\"additionalParameters\":{}}"
+    } ],
+    "disableableCredentialTypes" : [ ],
+    "requiredActions" : [ ],
+    "realmRoles" : [ "SUPER_ADMIN", "default-roles-modapto-dev" ],
+    "clientRoles" : {
+      "realm-management" : [ "query-realms", "manage-realm", "manage-clients", "realm-admin", "manage-users", "query-users", "manage-authorization", "view-identity-providers", "view-users", "query-clients", "view-clients", "query-groups", "view-events", "view-authorization", "view-realm" ],
+      "modapto" : [ "SUPER_ADMIN" ]
+    },
+    "notBefore" : 0,
+    "groups" : [ ]
+  }]
+}

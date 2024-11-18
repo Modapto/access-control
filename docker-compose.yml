@@ -10,15 +10,15 @@ services:
       POSTGRES_USER: ${POSTGRES_USER}
       POSTGRES_PASSWORD: ${POSTGRES_PASSWORD}
     volumes:
-      - ./data/postgres:/var/lib/postgresql/data
+      - postgres_data:/var/lib/postgresql/data
     ports:
       - ${POSTGRES_EXPOSE_PORT}:${POSTGRES_SERVER_PORT}
     healthcheck:
       test: ["CMD-SHELL", "pg_isready -U ${POSTGRES_USER} -d ${POSTGRES_DB}"]
-      interval: 10s
+      interval: 5s
       timeout: 10s
       retries: 20
-      start_period: 20s
+      start_period: 15s
     networks:
       - keycloak
     
@@ -44,10 +44,10 @@ services:
         condition: service_healthy
     healthcheck:
       test: ["CMD-SHELL", "curl --fail --silent ${KEYCLOAK_ISSUER_URI} || exit 1"]
-      interval: 10s
+      interval: 5s
       timeout: 10s
       retries: 20
-      start_period: 20s
+      start_period: 10s
     networks: 
       - modapto
       - keycloak
@@ -94,7 +94,10 @@ services:
     networks:
       - modapto
       - keycloak
-    
+
+volumes:
+  postgres_data:
+
 networks:
   keycloak:
     driver: bridge

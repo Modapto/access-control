@@ -60,6 +60,40 @@ It exploits OAuth2.0 and OpenID protocols integrated with Spring Security with c
 
 ### Keycloak Configuration
 
+On folder [Keycloak Realm Data](./Keycloak_Realm_Data) two files can be located:
+
+1. **modapto-dev-realm.json** : Configuration of modapto-dev realm
+
+2. **modapto-dev-users.json** : Two initial users for MODAPTO. More user can be created as requested
+
+Upon the initialization of Keycloak container, we implement the following steps to initialize the realm:
+
+1. Press to create a new Realm
+
+2. Upload the **modapto-dev-realm.json**
+
+3. Press create realm
+
+To accordingly upload the initial users in the system:
+
+1. Navigate to Realm Settings
+
+2. On the top right corner of UI press "Action"
+
+3. Select "Partial Import"
+
+4. Upload the **modapto-dev-users.json** file
+
+5. Select the box for user creation and set the resource strategy to overwrite / skip
+
+6. Press "Import"
+
+For the created Users you can use the following credentials (username / password):
+
+1. **CRF User**: crf@test.com / CRF@user123@
+
+2. **Super Admin**: superadmin@admin.com / S@admin123@
+
 Current configuration of Keycloak Roles, User Attributes, Clients and Realm Roles is depicted in the following images.
 
 #### Groups
