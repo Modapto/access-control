@@ -15,10 +15,10 @@ services:
       - ${POSTGRES_EXPOSE_PORT}:${POSTGRES_SERVER_PORT}
     healthcheck:
       test: ["CMD-SHELL", "pg_isready -U ${POSTGRES_USER} -d ${POSTGRES_DB}"]
-      interval: 5s
+      interval: 10s
       timeout: 10s
       retries: 20
-      start_period: 15s
+      start_period: 20s
     networks:
       - keycloak
     
@@ -44,10 +44,10 @@ services:
         condition: service_healthy
     healthcheck:
       test: ["CMD-SHELL", "curl --fail --silent ${KEYCLOAK_ISSUER_URI} || exit 1"]
-      interval: 5s
+      interval: 10s
       timeout: 10s
       retries: 20
-      start_period: 15s
+      start_period: 20s
     networks: 
       - modapto
       - keycloak
