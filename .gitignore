@@ -41,3 +41,8 @@ notes.txt
 sonar-analysis.txt
 .dockerignore
 .env
+
+### Keep empty folders
+data/*
+!data/postgres/
+!data/postgres/.gitkeep
