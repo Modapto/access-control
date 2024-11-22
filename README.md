@@ -58,6 +58,10 @@ It exploits OAuth2.0 and OpenID protocols integrated with Spring Security with c
 
 3. Access the OpenAPI documentation at `http://localhost:8093/api/user-manager/swagger-ui/index.html`.
 
+4. Set up properly the Identity Manager described in the next section
+
+5. **NOTE**: To use the app and its APIs a user must be initially authenticated in the platform (/api/users/authenticate). Depending on the action, some requests would require specific privileges according to the user type (Super Admin, Admin, User).
+
 ### Keycloak Configuration
 
 On folder [Keycloak Realm Data](./Keycloak_Realm_Data) two files can be located:
