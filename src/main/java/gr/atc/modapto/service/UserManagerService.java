@@ -3,7 +3,6 @@ package gr.atc.modapto.service;
 import java.util.*;
 import java.util.concurrent.CompletableFuture;
 
-import gr.atc.modapto.dto.keycloak.ClientRepresentationDTO;
 import gr.atc.modapto.dto.keycloak.CredentialRepresentationDTO;
 import gr.atc.modapto.dto.keycloak.RoleRepresentationDTO;
 import gr.atc.modapto.dto.keycloak.UserRepresentationDTO;
@@ -51,6 +50,8 @@ public class UserManagerService implements IUserManagerService {
 
     private final RestTemplate restTemplate = new RestTemplate();
 
+    private final KeycloakSupportService keycloakSupportService;
+
     // Strings commonly used
     private static final String TOKEN = "access_token";
     private static final String GRANT_TYPE_PASSWORD = "password";
@@ -61,10 +62,22 @@ public class UserManagerService implements IUserManagerService {
     private static final String USERNAME = "username";
     private static final String SCOPE = "scope";
     private static final String PROTOCOL = "openid";
+    private static final String ACTIVATION_TOKEN = "activation_token";
+    private static final String ACTIVATION_EXPIRY = "activation_expiry";
 
     // Arrays of realm-manage roles
-    private static final List<String> USER_ROLES_MANAGEMENT_ARRAY = List.of("manage-users");
-    private static final List<String> ADMIN_ROLES_MANAGEMENT_ARRAY = List.of("manage-users", "view-users", "query-users");
+    private static final List<String> USER_ROLES_MANAGEMENT_ARRAY = List.of("manage-users", "query-users");
+    private static final List<String> ADMIN_ROLES_MANAGEMENT_ARRAY = List.of(
+            "query-realms",
+            "manage-clients",
+            "manage-users",
+            "query-users",
+            "manage-authorization",
+            "view-users",
+            "query-clients",
+            "view-clients",
+            "query-groups"
+    );
     private static final List<String> SUPER_ADMIN_ROLES_MANAGEMENT_ARRAY = List.of(
             "query-realms",
             "manage-realm",
@@ -82,6 +95,10 @@ public class UserManagerService implements IUserManagerService {
             "view-authorization",
             "view-realm"
     );
+
+    public UserManagerService(KeycloakSupportService keycloakSupportService){
+        this.keycloakSupportService = keycloakSupportService;
+    }
 
     /**
      * Authenticate the User Credentials in Keycloak and return Token
@@ -179,16 +196,19 @@ public class UserManagerService implements IUserManagerService {
      * @return True on success, False on error
      */
     @Override
-    public boolean updateUser(UserDTO user, String userId, String token) {
+    public boolean updateUser(UserDTO user, UserRepresentationDTO existingUser, String userId, String token) {
         try{
             // Set Headers
             HttpHeaders headers = new HttpHeaders();
             headers.setBearerAuth(token);
             headers.setContentType(MediaType.APPLICATION_JSON);
 
-            UserRepresentationDTO existingUser = retrieveUserById(userId, token);
-            if (existingUser == null)
-                return false;
+            // Retrieve the User Representation from Keycloak if not provided
+            if (existingUser == null) {
+                existingUser = retrieveUserById(userId, token);
+                if (existingUser == null)
+                    return false;
+            }
 
             HttpEntity<UserRepresentationDTO> entity = new HttpEntity<>(UserRepresentationDTO.fromUserDTO(user, existingUser), headers);
 
@@ -564,11 +584,11 @@ public class UserManagerService implements IUserManagerService {
         return CompletableFuture.runAsync(() -> {
             try {
                 // Locate client's id
-                String clientID = findClientIdPerClient("realm-management", token);
+                String clientID = keycloakSupportService.getClientId();
                 if(clientID == null)
                     return;
 
-                List<RoleRepresentationDTO> realmManagementRoles = findRealmManagementRoleRepresentationDependingOnUserRole(pilotRole, clientID, token);
+                List<RoleRepresentationDTO> realmManagementRoles = findRealmManagementRoleRepresentationDependingOnPilotRole(pilotRole, clientID, token);
                 if (realmManagementRoles.isEmpty()) {
                     return;
                 }
@@ -642,7 +662,7 @@ public class UserManagerService implements IUserManagerService {
     /**
      * Retrieve all users with a specific role from Keycloak
      *
-     * @param realmRole: User Role
+     * @param realmRole: User Role (Admin, User, Super Admin)
      * @param tokenValue: JWT Token value
      * @return List<UserDTO>
      */
@@ -650,7 +670,7 @@ public class UserManagerService implements IUserManagerService {
     public List<UserDTO> fetchUsersByRole(String realmRole, String tokenValue) {
         try {
             String clientName = clientId;
-            String clientID = findClientIdPerClient(clientName, tokenValue);
+            String clientID = keycloakSupportService.getClientId();
             if(clientID == null)
                 throw new DataRetrievalException("Unable to locate requested client ID in Keycloak");
 
@@ -670,7 +690,7 @@ public class UserManagerService implements IUserManagerService {
                     }
             );
 
-            if (response != null && response.getStatusCode().is2xxSuccessful() && response.getBody() != null && !response.getBody().isEmpty())
+            if (response.getStatusCode().is2xxSuccessful() && response.getBody() != null && !response.getBody().isEmpty())
                 return response.getBody().stream().map(UserRepresentationDTO::toUserDTO).toList();
 
             return Collections.emptyList();
@@ -684,13 +704,56 @@ public class UserManagerService implements IUserManagerService {
     }
 
     /**
-     * Retrieve all corresponding realm-management roles depending on user role
+     * Activate user account by updating the information on the user
+     *
+     * @param userId : User ID
+     * @param activationToken : Activation token automatically stored and generated in the user
+     * @param password : User's password
+     * @return True on success, False on Error
+     */
+    @Override
+    public boolean activateUser(String userId, String activationToken, String password) {
+
+        // Request token to access client
+        String token = keycloakSupportService.retrieveComponentJwtToken();
+        if(token == null)
+            return false;
+
+        // Retrieve the User Representation from Keycloak
+        UserRepresentationDTO existingUser = retrieveUserById(userId, token);
+        if (existingUser == null)
+            return false;
+
+        // Validate the activation token and its expiry
+        // - Ensure that both ACTIVATION_TOKEN and ACTIVATION_EXPIRY attributes exist in the user's attributes.
+        // - Verify that the ACTIVATION_TOKEN matches the provided activationToken.
+        // - Check that the ACTIVATION_EXPIRY time has not passed.
+        if (existingUser.getAttributes() == null
+                || !existingUser.getAttributes().containsKey(ACTIVATION_EXPIRY)
+                || !existingUser.getAttributes().containsKey(ACTIVATION_TOKEN)
+                || !existingUser.getAttributes().get(ACTIVATION_TOKEN).getFirst().equals(activationToken)
+                || existingUser.getAttributes().get(ACTIVATION_EXPIRY).getFirst().compareTo(String.valueOf(System.currentTimeMillis())) < 0)
+        {
+            // If any condition is not met, throw an exception
+            throw new InvalidActivationAttributes("Invalid activation token or activation expiry has passed. Please contact the admin of your organization.");
+        }
+
+        // Create a User DTO element and set the password
+        UserDTO user = new UserDTO();
+        user.setPassword(password);
+
+        // Update User's information
+        return updateUser(user, existingUser, userId, token);
+    }
+
+    /**
+     * Retrieve all corresponding realm-management roles depending on pilot role
      *e
      * @param pilotRole: Pilot role
      * @param token: JWT token value
      * @return List<RoleRepresentation if successful, otherwise null
      */
-    private List<RoleRepresentationDTO> findRealmManagementRoleRepresentationDependingOnUserRole(String pilotRole, String clientID, String token){
+    private List<RoleRepresentationDTO> findRealmManagementRoleRepresentationDependingOnPilotRole(String pilotRole, String clientID, String token){
         try{
             // Set Headers
             HttpHeaders headers = new HttpHeaders();
@@ -709,7 +772,7 @@ public class UserManagerService implements IUserManagerService {
 
 
             // Assign realm roles according to the Realm Role of User
-            if(response != null && response.getStatusCode().is2xxSuccessful() && response.getBody() != null && !response.getBody().isEmpty()){
+            if(response.getStatusCode().is2xxSuccessful() && response.getBody() != null && !response.getBody().isEmpty()){
                 if (pilotRole.equals(PilotRole.SUPER_ADMIN.toString()))
                     return response.getBody().stream().filter(role -> SUPER_ADMIN_ROLES_MANAGEMENT_ARRAY.stream()
                                     .anyMatch(superAdminRole -> superAdminRole.equalsIgnoreCase(role.getName())))
@@ -736,42 +799,5 @@ public class UserManagerService implements IUserManagerService {
         }
     }
 
-    /**
-     * Retrieve all corresponding realm-management roles depending on user role
-     *e
-     * @param client: Client's name
-     * @param token: JWT token value
-     * @return List<RoleRepresentation if successful, otherwise null
-     */
-    @Override
-    public String findClientIdPerClient(String client, String token){
-        try{
-            // Set Headers
-            HttpHeaders headers = new HttpHeaders();
-            headers.setBearerAuth(token);
-            headers.setContentType(MediaType.APPLICATION_JSON);
 
-            HttpEntity<Object> entity = new HttpEntity<>(null, headers);
-
-            String requestUri = adminUri.concat("/clients?clientId=").concat(client);
-            ResponseEntity<List<ClientRepresentationDTO>> response = restTemplate.exchange(
-                    requestUri,
-                    HttpMethod.GET,
-                    entity,
-                    new ParameterizedTypeReference<>() {}
-            );
-
-            if(response != null && response.getStatusCode().is2xxSuccessful() && response.getBody() != null && !response.getBody().isEmpty()){
-                return Objects.requireNonNull(response.getBody().stream().findFirst().orElse(null)).getId();
-            }
-
-            return null;
-        } catch (HttpClientErrorException | HttpServerErrorException e) {
-            log.error("HTTP error during retrieving client's id : {}, Response body: {}", e.getMessage(), e.getResponseBodyAsString(), e);
-            throw new KeycloakException("HTTP error during retrieving client's id", e);
-        } catch (RestClientException e) {
-            log.error("Error during retrieving client's id : {}", e.getMessage(), e);
-            throw new KeycloakException("Error during retrieving client's id", e);
-        }
-    }
 }

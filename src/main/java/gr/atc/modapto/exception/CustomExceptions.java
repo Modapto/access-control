@@ -15,4 +15,10 @@ public class CustomExceptions {
             super(message);
         }
     }
+
+    public static class InvalidActivationAttributes extends RuntimeException{
+        public InvalidActivationAttributes(String message) {
+            super(message);
+        }
+    }
 }

@@ -1,25 +1,31 @@
 package gr.atc.modapto.util;
 
+import java.util.HashMap;
+import java.util.List;
+import java.util.Map;
+
+import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertNotNull;
+import static org.junit.jupiter.api.Assertions.assertNull;
+import static org.junit.jupiter.api.Assertions.assertTrue;
 import org.junit.jupiter.api.BeforeAll;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
 import org.springframework.security.oauth2.jwt.Jwt;
 
-import java.util.*;
-
-import static org.junit.jupiter.api.Assertions.*;
-
 class JwtUtilsTest {
     private static Jwt jwt;
 
     @BeforeAll
+    @SuppressWarnings("unused")
     static void setup() {
         String tokenValue = "mock.jwt.token";
         Map<String, Object> claims = new HashMap<>();
         claims.put("realm_access", Map.of("roles", List.of("SUPER_ADMIN")));
         claims.put("resource_access", Map.of("modapto", Map.of("roles", List.of("ADMIN", "USER"))));
         claims.put("sub", "user123");
-        claims.put("pilot", "TEST_PILOT");
+        claims.put("pilot_code", "TEST_PILOT");
+        claims.put("user_role", "USER_ROLE_TEST");
         claims.put("pilot_role", "PILOT_ROLE_TEST");
 
         jwt = Jwt.withTokenValue(tokenValue)
@@ -129,6 +135,17 @@ class JwtUtilsTest {
         // Then
         assertNotNull(pilotRole);
         assertEquals("PILOT_ROLE_TEST", pilotRole);
+    }
+
+    @DisplayName("Extract user role: Success")
+    @Test
+    void givenJwt_whenExtractUserCode_thenReturnUserRole() {
+        // When
+        String userRole = JwtUtils.extractUserRole(jwt);
+
+        // Then
+        assertNotNull(userRole);
+        assertEquals("USER_ROLE_TEST", userRole);
     }
 
     @DisplayName("Extract pilot role: Null when no pilot role field")

@@ -7,7 +7,6 @@ import gr.atc.modapto.dto.keycloak.ClientRepresentationDTO;
 import gr.atc.modapto.dto.keycloak.RoleRepresentationDTO;
 import gr.atc.modapto.dto.keycloak.UserRepresentationDTO;
 import gr.atc.modapto.exception.CustomExceptions;
-import org.junit.jupiter.api.BeforeAll;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
@@ -32,7 +31,7 @@ import java.util.concurrent.CompletableFuture;
 
 import static org.junit.jupiter.api.Assertions.*;
 import static org.mockito.ArgumentMatchers.*;
-import static org.mockito.Mockito.when;
+import static org.mockito.Mockito.*;
 
 @ExtendWith(MockitoExtension.class)
 class UserManagerServiceTests {
@@ -46,11 +45,14 @@ class UserManagerServiceTests {
   @Mock
   private RestTemplate restTemplate;
 
+  @Mock
+  private KeycloakSupportService keycloakSupportService;
+
   @InjectMocks
   private UserManagerService userManagerService;
 
-  private static CredentialsDTO credentials;
-  private static UserRepresentationDTO userRepresentation;
+  private CredentialsDTO credentials;
+  private UserRepresentationDTO userRepresentation;
 
   private static final String MOCK_TOKEN = "mock-token";
   private static final String MOCK_EMAIL = "mockemail@test.com";
@@ -63,16 +65,13 @@ class UserManagerServiceTests {
   private static final String TOKEN = "access_token";
   private static final String GRANT_TYPE_REFRESH_TOKEN = "refresh_token";
 
-  @BeforeAll
-  static void initialSetup() {
-    credentials = CredentialsDTO.builder().email(testUserEmail).password(testUserPassword).build();
-
-    userRepresentation = UserRepresentationDTO.builder().email(MOCK_EMAIL).firstName("Test")
-        .lastName("User").enabled(true).username("TestUser").build();
-  }
-
   @BeforeEach
   void setup() {
+    credentials = CredentialsDTO.builder().email(testUserEmail).password(testUserPassword).build();
+
+    userRepresentation = UserRepresentationDTO.builder().id("123").email(MOCK_EMAIL).firstName("Test")
+            .lastName("User").enabled(true).username("TestUser").build();
+
     ReflectionTestUtils.setField(userManagerService, "adminUri", MOCK_ADMIN_URI);
     ReflectionTestUtils.setField(userManagerService, "tokenUri", MOCK_TOKEN_URI);
     ReflectionTestUtils.setField(userManagerService, "clientId", MOCK_CLIENT_ID);
@@ -237,9 +236,77 @@ class UserManagerServiceTests {
     assertEquals("123", result);
   }
 
+  @DisplayName("Activate user: Success")
+  @Test
+  void givenValidActivationParams_whenActivateUser_thenReturnTrue() {
+    // Add Attributes to user repsesentation
+    Map<String, List<String>> tempMap = new HashMap<>();
+    userRepresentation.setAttributes(tempMap);
+    userRepresentation.getAttributes().put("activation_token", List.of("mock-token"));
+    userRepresentation.getAttributes().put("activation_expiry", List.of("random-time"));
+
+    // Mock Keycloak Return of Token
+    when(keycloakSupportService.retrieveComponentJwtToken()).thenReturn(MOCK_TOKEN);
+
+    // Mock user retrieval
+    when(restTemplate.exchange(eq(MOCK_ADMIN_URI + "/users/123"), eq(HttpMethod.GET),
+            any(HttpEntity.class), eq(UserRepresentationDTO.class)))
+            .thenReturn(new ResponseEntity<>(userRepresentation, HttpStatus.OK));
+
+    // Mock user update
+    when(restTemplate.exchange(eq(MOCK_ADMIN_URI + "/users/123"), eq(HttpMethod.PUT),
+            any(HttpEntity.class), eq(Object.class)))
+            .thenReturn(new ResponseEntity<>(null, HttpStatus.NO_CONTENT));
+
+    // Use spy service
+    boolean result = userManagerService.activateUser("123", MOCK_TOKEN, "newPassword");
+
+    assertTrue(result);
+  }
+
+  @DisplayName("Activate User: Invalid Token - No Token Available")
+  @Test
+  void givenFailedTokenRetrieval_whenActivateUser_thenReturnFalse() {
+    // Add Attributes to user repsesentation
+    Map<String, List<String>> tempMap = new HashMap<>();
+    userRepresentation.setAttributes(tempMap);
+    userRepresentation.getAttributes().put("activation_expiry", List.of("random-time"));
+
+    // Mock Keycloak Return of Token
+    when(keycloakSupportService.retrieveComponentJwtToken()).thenReturn(MOCK_TOKEN);
+
+    // Mock user retrieval
+    when(restTemplate.exchange(eq(MOCK_ADMIN_URI + "/users/123"), eq(HttpMethod.GET),
+            any(HttpEntity.class), eq(UserRepresentationDTO.class)))
+            .thenReturn(new ResponseEntity<>(userRepresentation, HttpStatus.OK));
+
+    // When - Then
+    assertThrows(CustomExceptions.InvalidActivationAttributes.class, () ->
+            userManagerService.activateUser("123", MOCK_TOKEN, "test-password"));
+  }
+
+  @DisplayName("Activate User: User Not Found")
+  @Test
+  void givenNonExistentUser_whenActivateUser_thenReturnFalse() {
+    // Given
+    // Mock Keycloak Return of Token
+    when(keycloakSupportService.retrieveComponentJwtToken()).thenReturn(MOCK_TOKEN);
+
+    // When
+    when(restTemplate.exchange(eq(MOCK_ADMIN_URI + "/users/123"), eq(HttpMethod.GET),
+            any(HttpEntity.class), eq(UserRepresentationDTO.class)))
+            .thenReturn(new ResponseEntity<>(null, HttpStatus.NOT_FOUND));
+
+    // When
+    boolean result = userManagerService.activateUser("123", "mock-activation-token", "test-password");
+
+    // Then
+    assertFalse(result);
+  }
+
   @DisplayName("Update user: Success")
   @Test
-  void givenUserDTO_whenUpdateUser_thenReturnTrue() {
+  void givenUserInformation_whenUpdateUser_thenReturnTrue() {
     // Given
     UserDTO userDTO = new UserDTO();
     userDTO.setEmail(MOCK_EMAIL);
@@ -249,15 +316,15 @@ class UserManagerServiceTests {
     String userId = "123";
 
     when(restTemplate.exchange(eq(MOCK_ADMIN_URI + "/users/" + userId), eq(HttpMethod.GET),
-        any(HttpEntity.class), eq(UserRepresentationDTO.class)))
+            any(HttpEntity.class), eq(UserRepresentationDTO.class)))
             .thenReturn(new ResponseEntity<>(userRepresentation, HttpStatus.OK));
 
     when(restTemplate.exchange(eq(MOCK_ADMIN_URI + "/users/" + userId), eq(HttpMethod.PUT),
-        any(HttpEntity.class), eq(Object.class)))
+            any(HttpEntity.class), eq(Object.class)))
             .thenReturn(new ResponseEntity<>(null, HttpStatus.NO_CONTENT));
 
     // When
-    boolean result = userManagerService.updateUser(userDTO, userId, MOCK_TOKEN);
+    boolean result = userManagerService.updateUser(userDTO, null, userId, MOCK_TOKEN);
 
     // Then
     assertTrue(result);
@@ -455,18 +522,11 @@ class UserManagerServiceTests {
         MOCK_ADMIN_URI + "/clients/" + MOCK_CLIENT_ID + "/roles/OPERATOR/users";
 
     // Mock the response for finding the client ID
-    ClientRepresentationDTO clientRepresentation = new ClientRepresentationDTO();
-    clientRepresentation.setId(MOCK_CLIENT_ID);
-    ResponseEntity<List<ClientRepresentationDTO>> clientIdResponse =
-        new ResponseEntity<>(List.of(clientRepresentation), HttpStatus.OK);
+    when(keycloakSupportService.getClientId()).thenReturn(MOCK_CLIENT_ID);
 
     // Mock the response for fetching users by role
     ResponseEntity<List<UserRepresentationDTO>> fetchUsersResponse =
         new ResponseEntity<>(List.of(userRepresentation), HttpStatus.OK);
-
-    // Simulate the findClientIdPerClient method returning a valid client ID
-    when(restTemplate.exchange(eq(clientIdRequestUri), eq(HttpMethod.GET), any(HttpEntity.class),
-        any(ParameterizedTypeReference.class))).thenReturn(clientIdResponse);
 
     // Simulate fetching users by role
     when(restTemplate.exchange(eq(fetchUsersRequestUri), eq(HttpMethod.GET), any(HttpEntity.class),
@@ -478,7 +538,7 @@ class UserManagerServiceTests {
     // Then
     assertNotNull(result);
     assertEquals(1, result.size());
-    assertEquals(userRepresentation.getEmail(), result.get(0).getEmail());
+    assertEquals(userRepresentation.getEmail(), result.getFirst().getEmail());
   }
 
   @SuppressWarnings("unchecked")
@@ -491,18 +551,12 @@ class UserManagerServiceTests {
         MOCK_ADMIN_URI + "/clients/" + MOCK_CLIENT_ID + "/roles/OPERATOR/users";
 
     // Mock the response for finding the client ID
-    ClientRepresentationDTO clientRepresentation = new ClientRepresentationDTO();
-    clientRepresentation.setId(MOCK_CLIENT_ID);
-    ResponseEntity<List<ClientRepresentationDTO>> clientIdResponse =
-        new ResponseEntity<>(List.of(clientRepresentation), HttpStatus.OK);
+    when(keycloakSupportService.getClientId()).thenReturn(MOCK_CLIENT_ID);
 
     // Mock an empty response for fetching users
     ResponseEntity<List<UserRepresentationDTO>> fetchUsersResponse =
         new ResponseEntity<>(Collections.emptyList(), HttpStatus.OK);
 
-    // Simulate the findClientIdPerClient method returning a valid client ID
-    when(restTemplate.exchange(eq(clientIdRequestUri), eq(HttpMethod.GET), any(HttpEntity.class),
-        any(ParameterizedTypeReference.class))).thenReturn(clientIdResponse);
 
     // Simulate fetching an empty list of users by role
     when(restTemplate.exchange(eq(fetchUsersRequestUri), eq(HttpMethod.GET), any(HttpEntity.class),

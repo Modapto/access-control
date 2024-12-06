@@ -6,8 +6,7 @@ package gr.atc.modapto.enums;
 public enum PilotRole {
     USER("USER"),
     ADMIN("ADMIN"),
-    SUPER_ADMIN("SUPER_ADMIN"),
-    NONE("NONE");
+    SUPER_ADMIN("SUPER_ADMIN");
 
     private final String role;
 

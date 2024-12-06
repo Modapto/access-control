@@ -6,24 +6,27 @@ import java.util.Map;
 import java.util.concurrent.CompletableFuture;
 
 import static org.hamcrest.CoreMatchers.is;
+
+import gr.atc.modapto.service.KeycloakSupportService;
 import org.junit.jupiter.api.BeforeAll;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
-import static org.mockito.ArgumentMatchers.any;
-import static org.mockito.ArgumentMatchers.anyString;
+
+import static org.mockito.ArgumentMatchers.*;
 import static org.mockito.BDDMockito.given;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.test.autoconfigure.web.servlet.AutoConfigureMockMvc;
 import org.springframework.boot.test.context.SpringBootTest;
-import org.springframework.boot.test.mock.mockito.MockBean;
 import org.springframework.http.MediaType;
 import org.springframework.security.core.authority.SimpleGrantedAuthority;
 import org.springframework.security.core.context.SecurityContextHolder;
 import org.springframework.security.oauth2.jwt.Jwt;
 import org.springframework.security.oauth2.server.resource.authentication.JwtAuthenticationToken;
 import org.springframework.security.test.context.support.WithMockUser;
+import org.springframework.test.context.bean.override.mockito.MockitoBean;
 import org.springframework.test.web.servlet.MockMvc;
 import org.springframework.test.web.servlet.ResultActions;
+
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.delete;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.get;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.post;
@@ -49,7 +52,10 @@ class UserManagerControllerTests {
     @Autowired
     private MockMvc mockMvc;
 
-    @MockBean
+    @MockitoBean
+    private KeycloakSupportService keycloakSupportService;
+
+    @MockitoBean
     private UserManagerService userManagerService;
 
     @Autowired
@@ -82,9 +88,9 @@ class UserManagerControllerTests {
                 .lastName("Test")
                 .username("UserTest")
                 .password("TestPass123@")
-                .pilotCode(PilotCode.NONE)
-                .pilotRole(PilotRole.NONE)
-                .userRole(UserRole.NONE)
+                .pilotCode(PilotCode.CRF)
+                .pilotRole(PilotRole.ADMIN)
+                .userRole(UserRole.LOGISTICS_MANAGER)
                 .build();
 
         String tokenValue = "mock.jwt.token";
@@ -92,8 +98,9 @@ class UserManagerControllerTests {
         claims.put("realm_access", Map.of("roles", List.of("SUPER_ADMIN")));
         claims.put("resource_access", Map.of("modapto", Map.of("roles", List.of("SUPER_ADMIN"))));
         claims.put("sub", "user");
-        claims.put("pilot", "TEST");
-        claims.put("pilot_role", "TEST");
+        claims.put("pilot_code", "ALL");
+        claims.put("user_role", "SUPER_ADMIN");
+        claims.put("pilot_role", "SUPER_ADMIN");
 
         jwt = Jwt.withTokenValue(tokenValue)
                 .headers(header -> header.put("alg", "HS256"))
@@ -304,10 +311,11 @@ class UserManagerControllerTests {
     @Test
     void givenValidUser_whenUpdateUser_thenReturnSuccess() throws Exception {
         // Given
-        given(userManagerService.updateUser(any(UserDTO.class), anyString(), anyString())).willReturn(true);
+        given(userManagerService.updateUser(any(UserDTO.class), isNull(), anyString(), anyString())).willReturn(true);
+        given(userManagerService.retrieveUserById(anyString(), anyString())).willReturn(UserRepresentationDTO.fromUserDTO(user, null));
 
         // Mock JWT authentication
-        JwtAuthenticationToken jwtAuthenticationToken = new JwtAuthenticationToken(jwt, List.of(new SimpleGrantedAuthority("ROLE_USER")));
+        JwtAuthenticationToken jwtAuthenticationToken = new JwtAuthenticationToken(jwt, List.of(new SimpleGrantedAuthority("ROLE_ADMIN")));
         SecurityContextHolder.getContext().setAuthentication(jwtAuthenticationToken);
 
         // When
@@ -322,11 +330,60 @@ class UserManagerControllerTests {
                 .andExpect(jsonPath("$.message", is("User updated successfully")));
     }
 
+    @DisplayName("Update User: Forbidden for Non-Admin Users updating other users")
+    @Test
+    void givenSimpleUser_whenUpdateOtherUserOutsidePilot_thenReturnForbidden() throws Exception {
+        // Given
+        Jwt mockToken = createMockJwtToken("OPERATOR", "USER", "SEW");
+        given(userManagerService.retrieveUserById(anyString(), anyString())).willReturn(UserRepresentationDTO.fromUserDTO(user, null));
+
+        // Mock JWT authentication
+        JwtAuthenticationToken jwtAuthenticationToken = new JwtAuthenticationToken(mockToken,
+                List.of(new SimpleGrantedAuthority("ROLE_USER")));
+        SecurityContextHolder.getContext().setAuthentication(jwtAuthenticationToken);
+
+        // When
+        ResultActions response = mockMvc.perform(put("/api/users/update")
+                .contentType(MediaType.APPLICATION_JSON)
+                .content(objectMapper.writeValueAsString(user))
+                .param("userId", user.getUserId()));
+
+        // Then
+        response.andExpect(status().isForbidden())
+                .andExpect(jsonPath("$.success", is(false)))
+                .andExpect(jsonPath("$.message", is("User of type 'USER' can only update his personal information")));
+    }
+
+    @DisplayName("Update User: Forbidden for Admin Users updating  users outside their organization")
+    @Test
+    void givenAdminUser_whenUpdateOtherUserInAnotherPilot_thenReturnForbidden() throws Exception {
+        // Given
+        Jwt mockToken = createMockJwtToken("OPERATOR", "ADMIN", "SEW");
+        given(userManagerService.retrieveUserById(anyString(), anyString())).willReturn(UserRepresentationDTO.fromUserDTO(user, null));
+
+        // Mock JWT authentication
+        JwtAuthenticationToken jwtAuthenticationToken = new JwtAuthenticationToken(mockToken,
+                List.of(new SimpleGrantedAuthority("ROLE_ADMIN")));
+        SecurityContextHolder.getContext().setAuthentication(jwtAuthenticationToken);
+
+        // When
+        ResultActions response = mockMvc.perform(put("/api/users/update")
+                .contentType(MediaType.APPLICATION_JSON)
+                .content(objectMapper.writeValueAsString(user))
+                .param("userId", user.getUserId()));
+
+        // Then
+        response.andExpect(status().isForbidden())
+                .andExpect(jsonPath("$.success", is(false)))
+                .andExpect(jsonPath("$.message", is("User of type 'ADMIN' can only update user's inside their organization")));
+    }
+
     @DisplayName("Update User: Failure")
     @Test
     void givenValidUser_whenUpdateUserFails_thenReturnServerError() throws Exception {
         // Given
-        given(userManagerService.updateUser(any(UserDTO.class), anyString(), anyString())).willReturn(false);
+        given(userManagerService.updateUser(any(UserDTO.class), any(UserRepresentationDTO.class), anyString(), anyString())).willReturn(false);
+        given(userManagerService.retrieveUserById(anyString(), anyString())).willReturn(UserRepresentationDTO.fromUserDTO(user, null));
 
         // Mock JWT authentication
         JwtAuthenticationToken jwtAuthenticationToken = new JwtAuthenticationToken(jwt, List.of(new SimpleGrantedAuthority("ROLE_USER")));
@@ -549,5 +606,21 @@ class UserManagerControllerTests {
         response.andExpect(status().isInternalServerError())
                 .andExpect(jsonPath("$.success", is(false)))
                 .andExpect(jsonPath("$.message", is("Unable to delete user from Keycloak")));
+    }
+
+    private Jwt createMockJwtToken(String userRole, String pilotRole, String pilotCode){
+        String tokenValue = "mock.jwt.token";
+        Map<String, Object> claims = new HashMap<>();
+        claims.put("realm_access", Map.of("roles", List.of("SUPER_ADMIN")));
+        claims.put("resource_access", Map.of("modapto", Map.of("roles", List.of("SUPER_ADMIN"))));
+        claims.put("sub", "user");
+        claims.put("pilot_code", pilotCode);
+        claims.put("pilot_role", pilotRole);
+        claims.put("user_role", userRole);
+
+        return Jwt.withTokenValue(tokenValue)
+                .headers(header -> header.put("alg", "HS256"))
+                .claims(claim -> claim.putAll(claims))
+                .build();
     }
 }

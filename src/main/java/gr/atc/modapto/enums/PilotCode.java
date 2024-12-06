@@ -8,7 +8,7 @@ public enum PilotCode {
     ILTAR("ILTAR"),
     SEW("SEW"),
     FFT("FFT"),
-    NONE("NONE");
+    ALL("ALL");
 
     private final String pilot;
 

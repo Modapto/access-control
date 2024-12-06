@@ -20,9 +20,12 @@ import java.util.Map;
 @NoArgsConstructor
 public class UserRepresentationDTO {
 
-    private static final String PILOT = "pilot";
+    private static final String PILOT_CODE = "pilot_code";
     private static final String PILOT_ROLE = "pilot_role";
-    private static final String PILOT_TYPE = "pilot_type";
+    private static final String USER_ROLE = "user_role";
+    private static final String ACTIVATION_TOKEN = "activation_token";
+    private static final String ACTIVATION_EXPIRY = "activation_expiry";
+
 
     @JsonProperty
     private String id;
@@ -57,11 +60,17 @@ public class UserRepresentationDTO {
     // Used both for creating and updating a User
     public static UserRepresentationDTO fromUserDTO(UserDTO user, UserRepresentationDTO existingUser) {
         if (user == null)
-            return null;
+            return existingUser;
 
-        UserRepresentationDTO keycloakUser = existingUser != null ? existingUser : new UserRepresentationDTO();
-
-        keycloakUser.setEnabled(true);
+        UserRepresentationDTO keycloakUser;
+        // User will be by default disabled until he activates its account and create a new password
+        if (existingUser == null) {
+            keycloakUser = new UserRepresentationDTO();
+            keycloakUser.setEnabled(false);
+        } else {
+            keycloakUser = existingUser;
+            keycloakUser.setEnabled(true);
+        }
 
         if (user.getFirstName() != null) {
             keycloakUser.setFirstName(user.getFirstName());
@@ -80,7 +89,8 @@ public class UserRepresentationDTO {
             keycloakUser.setUsername(user.getUsername());
         }
 
-        if (user.getPassword() != null) {
+        // Update password only if provided and we want to update the user
+        if (user.getPassword() != null && existingUser != null) {
             keycloakUser.setCredentials(List.of(
                     CredentialRepresentationDTO.builder()
                             .temporary(false)
@@ -94,17 +104,26 @@ public class UserRepresentationDTO {
         }
 
         if (user.getUserRole() != null) {
-            keycloakUser.getAttributes().put(PILOT_ROLE, List.of(user.getUserRole().toString()));
+            keycloakUser.getAttributes().put(USER_ROLE, List.of(user.getUserRole().toString()));
         }
 
         if (user.getPilotRole() != null) {
-            keycloakUser.getAttributes().put(PILOT_TYPE, List.of(user.getPilotRole().toString()));
+            keycloakUser.getAttributes().put(PILOT_ROLE, List.of(user.getPilotRole().toString()));
         }
 
-        if (user.getPilotCode() != null && user.getPilotCode() != PilotCode.NONE) {
+        if (user.getPilotCode() != null && user.getPilotCode() != PilotCode.ALL) {
             String pilotType = "/" + user.getPilotCode() + "/" + user.getPilotRole();
             keycloakUser.setGroups(List.of("/" + user.getPilotCode(), pilotType));
-            keycloakUser.getAttributes().put(PILOT, List.of(user.getPilotCode().toString()));
+            keycloakUser.getAttributes().put(PILOT_CODE, List.of(user.getPilotCode().toString()));
+        }
+
+        // Set activation token and expiration time as attributes - Two cases can be observed: 1) Create a new user 2) Activate user
+        if (existingUser == null && user.getActivationExpiry() != null && user.getActivationToken() != null){ // Creation of a new user
+            keycloakUser.getAttributes().put(ACTIVATION_TOKEN, List.of(user.getActivationToken()));
+            keycloakUser.getAttributes().put(ACTIVATION_EXPIRY, List.of(user.getActivationExpiry()));
+        } else if (keycloakUser.getAttributes().containsKey(ACTIVATION_TOKEN) && keycloakUser.getAttributes().containsKey(ACTIVATION_EXPIRY)) { // This will apply only after the user has been activated
+            keycloakUser.getAttributes().remove(ACTIVATION_TOKEN);
+            keycloakUser.getAttributes().remove(ACTIVATION_EXPIRY);
         }
 
         return keycloakUser;
@@ -117,9 +136,11 @@ public class UserRepresentationDTO {
                 .firstName(keycloakUser.getFirstName() != null ? keycloakUser.getFirstName() : null)
                 .lastName(keycloakUser.getLastName() != null ? keycloakUser.getLastName() : null)
                 .username(keycloakUser.getUsername() != null ? keycloakUser.getUsername() : null)
-                .userRole(keycloakUser.getAttributes() != null && keycloakUser.getAttributes().containsKey(PILOT_ROLE) && !keycloakUser.getAttributes().get(PILOT_ROLE).isEmpty() ? UserRole.valueOf(keycloakUser.getAttributes().get(PILOT_ROLE).getFirst()) : null)
-                .pilotCode(keycloakUser.getAttributes() != null && keycloakUser.getAttributes().containsKey(PILOT) && !keycloakUser.getAttributes().get(PILOT).isEmpty() ? PilotCode.valueOf(keycloakUser.getAttributes().get(PILOT).getFirst()) : null)
-                .pilotRole(keycloakUser.getAttributes() != null && keycloakUser.getAttributes().containsKey(PILOT_TYPE) && !keycloakUser.getAttributes().get(PILOT_TYPE).isEmpty() ? PilotRole.valueOf(keycloakUser.getAttributes().get(PILOT_TYPE).getFirst()) : null)
+                .userRole(keycloakUser.getAttributes() != null && keycloakUser.getAttributes().containsKey(USER_ROLE) && !keycloakUser.getAttributes().get(USER_ROLE).isEmpty() ? UserRole.valueOf(keycloakUser.getAttributes().get(USER_ROLE).getFirst()) : null)
+                .pilotCode(keycloakUser.getAttributes() != null && keycloakUser.getAttributes().containsKey(PILOT_CODE) && !keycloakUser.getAttributes().get(PILOT_CODE).isEmpty() ? PilotCode.valueOf(keycloakUser.getAttributes().get(PILOT_CODE).getFirst()) : null)
+                .pilotRole(keycloakUser.getAttributes() != null && keycloakUser.getAttributes().containsKey(PILOT_ROLE) && !keycloakUser.getAttributes().get(PILOT_ROLE).isEmpty() ? PilotRole.valueOf(keycloakUser.getAttributes().get(PILOT_ROLE).getFirst()) : null)
+                .activationToken(keycloakUser.getAttributes() != null && keycloakUser.getAttributes().containsKey(ACTIVATION_TOKEN) && !keycloakUser.getAttributes().get(ACTIVATION_TOKEN).isEmpty() ? keycloakUser.getAttributes().get(ACTIVATION_TOKEN).getFirst() : null)
+                .activationExpiry(keycloakUser.getAttributes() != null && keycloakUser.getAttributes().containsKey(ACTIVATION_EXPIRY) && !keycloakUser.getAttributes().get(ACTIVATION_EXPIRY).isEmpty() ? keycloakUser.getAttributes().get(ACTIVATION_EXPIRY).getFirst() : null)
                 .build();
     }
 }

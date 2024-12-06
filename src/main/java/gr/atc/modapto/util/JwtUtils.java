@@ -16,8 +16,9 @@ public class JwtUtils {
     private static final String CLAIM_RESOURCE_ACCESS = "resource_access";
     private static final String CLIENT = "modapto";
     private static final String ID_FIELD = "sub";
-    private static final String PILOT_FIELD = "pilot";
-    private static final String PILOT_ROLE_FIELD = "pilot_role";
+    private static final String PILOT_CODE = "pilot_code";
+    private static final String USER_ROLE = "user_role";
+    private static final String PILOT_ROLE = "pilot_role";
     private static final ObjectMapper objectMapper = new ObjectMapper();
 
     private JwtUtils() {}
@@ -44,19 +45,34 @@ public class JwtUtils {
     }
 
     /**
-     * Util to retrieve userId from JWT Token
+     * Util to retrieve pilot code from JWT Token
+     *
      * @param jwt Token to extract userId
      * @return userId
      */
     public static String extractPilotCode(Jwt jwt){
-        if (jwt == null || jwt.getClaimAsString(PILOT_FIELD) == null) {
+        if (jwt == null || jwt.getClaimAsString(PILOT_CODE) == null) {
             return null;
         }
-        return jwt.getClaimAsString(PILOT_FIELD);
+        return jwt.getClaimAsString(PILOT_CODE);
     }
 
     /**
-     * Util to retrieve pilot Code from JWT Token
+     * Util to retrieve pilot role from JWT Token
+     *
+     * @param jwt Token to extract pilot type
+     * @return Pilot Type
+     */
+    public static String extractPilotRole(Jwt jwt){
+        if (jwt == null || jwt.getClaimAsString(PILOT_ROLE) == null) {
+            return null;
+        }
+        return jwt.getClaimAsString(PILOT_ROLE);
+    }
+
+    /**
+     * Util to extract the userId from Token
+     *
      * @param jwt Token to extract userId
      * @return userId
      */
@@ -68,19 +84,21 @@ public class JwtUtils {
     }
 
     /**
-     * Util to retrieve pilot role of user from JWT Token
+     * Util to retrieve user role of user from JWT Token
+     *
      * @param jwt Token to extract user role
      * @return user role
      */
-    public static String extractPilotRole(Jwt jwt){
-        if (jwt == null || jwt.getClaimAsString(PILOT_ROLE_FIELD) == null) {
+    public static String extractUserRole(Jwt jwt){
+        if (jwt == null || jwt.getClaimAsString(USER_ROLE) == null) {
             return null;
         }
-        return jwt.getClaimAsString(PILOT_ROLE_FIELD);
+        return jwt.getClaimAsString(USER_ROLE);
     }
 
     /**
      * Util to extract User Type from JWT Token
+     *
      * @param jwt Token to extract userId
      * @return List<String> for the User Roles
      */

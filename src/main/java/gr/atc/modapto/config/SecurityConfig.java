@@ -16,78 +16,98 @@ import org.springframework.security.web.csrf.CsrfTokenRequestAttributeHandler;
 import org.springframework.web.cors.CorsConfiguration;
 import org.springframework.web.cors.CorsConfigurationSource;
 import org.springframework.web.cors.UrlBasedCorsConfigurationSource;
+import org.springframework.beans.factory.annotation.Value;
 
 import gr.atc.modapto.filter.CsrfCookieFilter;
 import gr.atc.modapto.keycloak.JwtAuthConverter;
 import gr.atc.modapto.keycloak.UnauthorizedEntryPoint;
+import jakarta.annotation.PostConstruct;
+import lombok.extern.slf4j.Slf4j;
 
 @Configuration
 @EnableWebSecurity
 @EnableMethodSecurity
+@Slf4j
 public class SecurityConfig {
+  @Value("${spring.security.oauth2.resourceserver.jwt.issuer-uri}")
+  private String issuerUri;
 
-        /**
-         * Initialize and Configure Security Filter Chain of HTTP connection
-         * 
-         * @param http       HttpSecurity
-         * @param entryPoint UnauthorizedEntryPoint -> To add proper API Response to the
-         *                   authorized request
-         * @return SecurityFilterChain
-         */
-        @Bean
-        public SecurityFilterChain defaultSecurityFilterChain(HttpSecurity http, UnauthorizedEntryPoint entryPoint)
-                        throws Exception {
-                CsrfTokenRequestAttributeHandler requestHandler = new CsrfTokenRequestAttributeHandler();
-                requestHandler.setCsrfRequestAttributeName("_csrf");
+  @Value("${spring.security.oauth2.resourceserver.jwt.jwk-set-uri}")
+  private String jwkSetUri;
 
-                // Convert Keycloak Roles with class to Spring Security Roles
-                JwtAuthConverter jwtAuthConverter = new JwtAuthConverter();
+  @PostConstruct
+  public void logKeycloakConfig() {
+    log.info("Keycloak Issuer URI: {}", issuerUri);
+    log.info("Keycloak JWK Set URI: {}", jwkSetUri);
+  }
 
-                // Set Session to Stateless so not to keep any information about the JWT
-                http.sessionManagement(session -> session.sessionCreationPolicy(SessionCreationPolicy.STATELESS))
-                                // Configure CORS access
-                                .cors(corsCustomizer -> corsCustomizer.configurationSource(corsConfigurationSource()))
-                                // Configure CSRF Token
-                                .csrf(csrf -> csrf.csrfTokenRequestHandler(requestHandler)
-                                                .ignoringRequestMatchers("/api/users/**", "/api/admin/**", "/api/user-manager/**") // For now ignore all requests under api/users, and api/admin
-                                                .csrfTokenRepository(CookieCsrfTokenRepository.withHttpOnlyFalse()))
-                                .addFilterAfter(new CsrfCookieFilter(), BasicAuthenticationFilter.class)
-                                .exceptionHandling(exc -> exc.authenticationEntryPoint(entryPoint))
-                                // HTTP Requests authorization properties on URLs
-                                .authorizeHttpRequests(authorizeRequests -> authorizeRequests
-                                                .requestMatchers("/api/users/authenticate", "/api/users/refresh-token", "/api/user-manager/**").permitAll()
-                                                .anyRequest().authenticated())
-                                // JWT Authentication Configuration to use with Keycloak
-                                .oauth2ResourceServer(oauth2ResourceServerCustomizer -> oauth2ResourceServerCustomizer
-                                        .jwt(jwtCustomizer -> jwtCustomizer.jwtAuthenticationConverter(jwtAuthConverter)));
-                return http.build();
-        }
+  /**
+   * Initialize and Configure Security Filter Chain of HTTP connection
+   * 
+   * @param http HttpSecurity
+   * @param entryPoint UnauthorizedEntryPoint -> To add proper API Response to the authorized
+   *        request
+   * @return SecurityFilterChain
+   */
+  @Bean
+  public SecurityFilterChain defaultSecurityFilterChain(HttpSecurity http,
+      UnauthorizedEntryPoint entryPoint) throws Exception {
+    CsrfTokenRequestAttributeHandler requestHandler = new CsrfTokenRequestAttributeHandler();
+    requestHandler.setCsrfRequestAttributeName("_csrf");
 
-        /**
-         * Initialize Granted Authorities Bean
-         * 
-         * @return GrantedAuthorityDefaults
-         */
-        @Bean
-        public GrantedAuthorityDefaults grantedAuthorityDefaults() {
-                return new GrantedAuthorityDefaults("");
-        }
+    // Convert Keycloak Roles with class to Spring Security Roles
+    JwtAuthConverter jwtAuthConverter = new JwtAuthConverter();
 
-        /**
-         * Settings for CORS
-         * 
-         * @return CorsConfigurationSource
-         */
-        @Bean
-        public CorsConfigurationSource corsConfigurationSource() {
-                CorsConfiguration configuration = new CorsConfiguration();
-                configuration.setAllowedOrigins(Collections.singletonList("*")); // For now we enable all Origins until the finalized version
-                configuration.setAllowedMethods(Collections.singletonList("*"));
-                configuration.setAllowedHeaders(Collections.singletonList("*"));
-                configuration.setAllowCredentials(true);
-                UrlBasedCorsConfigurationSource source = new UrlBasedCorsConfigurationSource();
-                source.registerCorsConfiguration("/**", configuration);
-                return source;
-        }
+    // Set Session to Stateless so not to keep any information about the JWT
+    http.sessionManagement(
+        session -> session.sessionCreationPolicy(SessionCreationPolicy.STATELESS))
+        // Configure CORS access
+        .cors(corsCustomizer -> corsCustomizer.configurationSource(corsConfigurationSource()))
+        // Configure CSRF Token
+        .csrf(csrf -> csrf.csrfTokenRequestHandler(requestHandler)
+            .ignoringRequestMatchers("/api/users/**", "/api/admin/**", "/api/user-manager/**",
+                "/api/users/activate") // For now ignore all requests under api/users, and api/admin
+            .csrfTokenRepository(CookieCsrfTokenRepository.withHttpOnlyFalse()))
+        .addFilterAfter(new CsrfCookieFilter(), BasicAuthenticationFilter.class)
+        .exceptionHandling(exc -> exc.authenticationEntryPoint(entryPoint))
+        // HTTP Requests authorization properties on URLs
+        .authorizeHttpRequests(authorizeRequests -> authorizeRequests
+            .requestMatchers("/api/users/authenticate", "/api/users/refresh-token",
+                "/api/users/activate", "/api/user-manager/**")
+            .permitAll().anyRequest().authenticated())
+        // JWT Authentication Configuration to use with Keycloak
+        .oauth2ResourceServer(oauth2ResourceServerCustomizer -> oauth2ResourceServerCustomizer
+            .jwt(jwtCustomizer -> jwtCustomizer.jwtAuthenticationConverter(jwtAuthConverter)));
+    return http.build();
+  }
+
+  /**
+   * Initialize Granted Authorities Bean
+   * 
+   * @return GrantedAuthorityDefaults
+   */
+  @Bean
+  public GrantedAuthorityDefaults grantedAuthorityDefaults() {
+    return new GrantedAuthorityDefaults("");
+  }
+
+  /**
+   * Settings for CORS
+   * 
+   * @return CorsConfigurationSource
+   */
+  @Bean
+  public CorsConfigurationSource corsConfigurationSource() {
+    CorsConfiguration configuration = new CorsConfiguration();
+    configuration.setAllowedOrigins(Collections.singletonList("*")); // For now we enable all
+                                                                     // Origins until the finalized
+                                                                     // version
+    configuration.setAllowedMethods(Collections.singletonList("*"));
+    configuration.setAllowedHeaders(Collections.singletonList("*"));
+    configuration.setAllowCredentials(true);
+    UrlBasedCorsConfigurationSource source = new UrlBasedCorsConfigurationSource();
+    source.registerCorsConfiguration("/**", configuration);
+    return source;
+  }
 
 }

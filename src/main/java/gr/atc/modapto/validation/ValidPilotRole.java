@@ -6,11 +6,11 @@ import jakarta.validation.Payload;
 import java.lang.annotation.*;
 
 @Documented
-@Constraint(validatedBy = UserRoleValidator.class)
+@Constraint(validatedBy = PilotRoleValidator.class)
 @Target({ElementType.PARAMETER, ElementType.FIELD})
 @Retention(RetentionPolicy.RUNTIME)
-public @interface ValidUserRole {
-    String message() default "Invalid user role inserted";
+public @interface ValidPilotRole {
+    String message() default "Invalid pilot role inserted. Only 'USER', 'ADMIN' or 'SUPER_ADMIN' are valid";
     Class<?>[] groups() default {};
     Class<? extends Payload>[] payload() default {};
 }
