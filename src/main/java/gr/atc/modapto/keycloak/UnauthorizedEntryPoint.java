@@ -2,14 +2,17 @@ package gr.atc.modapto.keycloak;
 
 import java.io.IOException;
 
+import com.fasterxml.jackson.databind.SerializationFeature;
+import com.fasterxml.jackson.datatype.jsr310.JavaTimeModule;
 import org.springframework.http.HttpStatus;
 import org.springframework.security.core.AuthenticationException;
+import org.springframework.security.oauth2.core.OAuth2AuthenticationException;
 import org.springframework.security.web.AuthenticationEntryPoint;
 import org.springframework.stereotype.Component;
 
 import com.fasterxml.jackson.databind.ObjectMapper;
 
-import gr.atc.modapto.controller.ApiResponseInfo;
+import gr.atc.modapto.controller.BaseResponse;
 import jakarta.servlet.http.HttpServletRequest;
 import jakarta.servlet.http.HttpServletResponse;
 
@@ -21,9 +24,36 @@ public class UnauthorizedEntryPoint implements AuthenticationEntryPoint {
         response.setStatus(HttpStatus.UNAUTHORIZED.value());
         response.setContentType("application/json");
 
-        ApiResponseInfo<String> responseMessage = ApiResponseInfo.error("Unauthorized request. Check token and try again.", "Invalid Token");
+        // Check if the request path should be excluded
+        String requestPath = request.getRequestURI();
+        if (isExcludedPath(requestPath)) {
+            // Allow the request to proceed
+            return;
+        }
 
-        ObjectMapper mapper = new ObjectMapper();
+        // Check the validity of the token
+        String errorMessage = "Unauthorized request. Check token and try again.";
+        String errorCode = "Invalid Token";
+
+        if (authException instanceof OAuth2AuthenticationException) {
+            errorMessage = "Invalid JWT provided.";
+            errorCode = "JWT has expired or is invalid";
+        }
+
+        BaseResponse<String> responseMessage = BaseResponse.error(errorMessage, errorCode);
+
+        ObjectMapper mapper = new ObjectMapper()
+                .registerModule(new JavaTimeModule())
+                .configure(SerializationFeature.WRITE_DATES_AS_TIMESTAMPS, false);
         mapper.writeValue(response.getWriter(), responseMessage);
+
+        response.getWriter().flush();
+    }
+
+    private boolean isExcludedPath(String path) {
+        // Define paths to exclude from unauthorized handling
+        return path.equals("/api/users/refresh-token") ||
+                path.equals("/api/users/authenticate") ||
+                path.equals("/api/users/activate");
     }
 }

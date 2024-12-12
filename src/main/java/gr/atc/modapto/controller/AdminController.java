@@ -2,6 +2,9 @@ package gr.atc.modapto.controller;
 
 import java.util.List;
 
+import gr.atc.modapto.dto.UserDTO;
+import gr.atc.modapto.validation.ValidPilotCode;
+import gr.atc.modapto.validation.ValidUserRole;
 import org.apache.commons.lang3.StringUtils;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
@@ -39,20 +42,21 @@ public class AdminController {
      * User Role: Specific role a use can have inside an organization
      * Pilot Code: The abbreviation of the Pilot
      */
-
     private final AdminService adminService;
 
     private static final String INVALID_TOKEN = "Token inserted is invalid. It does not contain any information about the user role or the pilot";
 
     private static final String UNAUTHORIZED_ACTION = "Unauthorized action";
 
+    private static final String USER_FORBIDDEN = "User of role 'USER' can not retrieve information for user roles";
+
     /**
-     * GET all Keycloak User Roles or filter by Pilot
+     * GET all Keycloak Pilot Roles or filter by Pilot
      *
      * @param jwt : JWT Token
-     * @return List<String> : List of User Roles
+     * @return List<String> : List of Pilot Roles
      */
-    @Operation(summary = "Retrieve all user roles from Keycloak")
+    @Operation(summary = "Retrieve all pilot roles from Keycloak")
     @ApiResponses(value = {
             @ApiResponse(responseCode = "200", description = "User roles retrieved successfully"),
             @ApiResponse(responseCode = "400", description = "Invalid request: either credentials or token must be provided!"),
@@ -61,17 +65,17 @@ public class AdminController {
             @ApiResponse(responseCode = "403", description = "Token inserted is invalid. It does not contain any information about the user role")
     })
     @PreAuthorize("hasAnyAuthority('ROLE_SUPER_ADMIN', 'ROLE_ADMIN')")
-    @GetMapping("/roles")
-    public ResponseEntity<ApiResponseInfo<List<String>>> getAllUserRoles(@AuthenticationPrincipal Jwt jwt) {
+    @GetMapping("/pilot-roles")
+    public ResponseEntity<BaseResponse<List<String>>> getAllPilotRoles(@AuthenticationPrincipal Jwt jwt) {
       // Validate token proper format
       String role = JwtUtils.extractPilotRole(jwt);
       if (role == null)
-          return new ResponseEntity<>(ApiResponseInfo.error("Token inserted is invalid. It does not contain any information about the user role"), HttpStatus.FORBIDDEN);
+          return new ResponseEntity<>(BaseResponse.error("Token inserted is invalid. It does not contain any information about the user role"), HttpStatus.FORBIDDEN);
 
       // Set the flag to true or false according to the Role of User
-      boolean isSuperAdmin = !role.equals(PilotRole.ADMIN.toString());
+      boolean isSuperAdmin = !role.equalsIgnoreCase(PilotRole.ADMIN.toString());
 
-      return new ResponseEntity<>(ApiResponseInfo.success(adminService.retrieveAllUserRoles(jwt.getTokenValue(), isSuperAdmin), "User roles retrieved successfully"), HttpStatus.OK);
+      return new ResponseEntity<>(BaseResponse.success(adminService.retrieveAllPilotRoles(jwt.getTokenValue(), isSuperAdmin), "Pilot roles retrieved successfully"), HttpStatus.OK);
     }
 
     /**
@@ -91,28 +95,31 @@ public class AdminController {
     })
     @PreAuthorize("hasAnyAuthority('ROLE_SUPER_ADMIN', 'ROLE_ADMIN')")
     @PostMapping("/roles/create")
-    public ResponseEntity<ApiResponseInfo<Void>> createNewUserRole(@AuthenticationPrincipal Jwt jwt, @RequestBody UserRoleDTO userRole) {
+    public ResponseEntity<BaseResponse<Void>> createNewUserRole(@AuthenticationPrincipal Jwt jwt, @RequestBody UserRoleDTO userRole) {
         // Validate token proper format
         String role = JwtUtils.extractPilotRole(jwt);
         String pilot = JwtUtils.extractPilotCode(jwt);
 
         // Check if JWT contains the proper information
         if (StringUtils.isAnyBlank(role, pilot))
-            return new ResponseEntity<>(ApiResponseInfo.error(INVALID_TOKEN), HttpStatus.FORBIDDEN);
+            return new ResponseEntity<>(BaseResponse.error(INVALID_TOKEN), HttpStatus.FORBIDDEN);
 
         // Validate that all fields are provided as body
         if (userRole == null || userRole.getPilotRole() == null || userRole.getName() == null || userRole.getPilotCode() == null)
-            return new ResponseEntity<>(ApiResponseInfo.error("All fields of roles must be inserted (Name, Pilot Code, Pilot Type)", "Missing fields"), HttpStatus.BAD_REQUEST);
+            return new ResponseEntity<>(BaseResponse.error("All fields of roles must be inserted (Name, Pilot Code, Pilot Type)", "Missing fields"), HttpStatus.BAD_REQUEST);
+
+        // Convert the Name to Upper Case if not already defined
+        userRole.setName(userRole.getName().toUpperCase());
 
         // Validate that Admin can only create a role inside his/her organization
-        if (role.equals(PilotRole.ADMIN.toString()) && !pilot.equals(userRole.getPilotCode().toString()))
-            return new ResponseEntity<>(ApiResponseInfo.error(UNAUTHORIZED_ACTION, "User of role 'ADMIN' can only create a new role only inside their organization"), HttpStatus.FORBIDDEN);
+        if (role.equalsIgnoreCase(PilotRole.ADMIN.toString()) && !pilot.equalsIgnoreCase(userRole.getPilotCode().toString()))
+            return new ResponseEntity<>(BaseResponse.error(UNAUTHORIZED_ACTION, "User of role 'ADMIN' can only create a new role only inside their organization"), HttpStatus.FORBIDDEN);
 
         // Create User Role in Keycloak
         if (adminService.createUserRole(jwt.getTokenValue(), userRole))
-            return new ResponseEntity<>(ApiResponseInfo.success(null,"User role created successfully"), HttpStatus.CREATED);
+            return new ResponseEntity<>(BaseResponse.success(null,"User role created successfully"), HttpStatus.CREATED);
         else
-            return new ResponseEntity<>(ApiResponseInfo.error("Unable to create and store the new user role"), HttpStatus.INTERNAL_SERVER_ERROR);
+            return new ResponseEntity<>(BaseResponse.error("Unable to create and store the new user role"), HttpStatus.INTERNAL_SERVER_ERROR);
     }
 
     /**
@@ -135,31 +142,31 @@ public class AdminController {
     })
     @PreAuthorize("hasAnyAuthority('ROLE_SUPER_ADMIN', 'ROLE_ADMIN')")
     @DeleteMapping("/roles/{roleName}")
-    public ResponseEntity<ApiResponseInfo<Void>> deleteUserRole(@AuthenticationPrincipal Jwt jwt, @PathVariable String roleName) {
+    public ResponseEntity<BaseResponse<Void>> deleteUserRole(@AuthenticationPrincipal Jwt jwt, @PathVariable String roleName) {
         // Validate token proper format
         String role = JwtUtils.extractPilotRole(jwt);
         String pilot = JwtUtils.extractPilotCode(jwt);
 
         // Check if JWT contains the proper information
         if (StringUtils.isAnyBlank(role, pilot))
-            return new ResponseEntity<>(ApiResponseInfo.error(INVALID_TOKEN), HttpStatus.FORBIDDEN);
+            return new ResponseEntity<>(BaseResponse.error(INVALID_TOKEN), HttpStatus.FORBIDDEN);
 
         // Fetch User Role given the roleId (if exists)
-        UserRoleDTO userRole = adminService.retrieveUserRole(jwt.getTokenValue(), roleName);
+        UserRoleDTO userRole = adminService.retrieveUserRole(jwt.getTokenValue(), roleName.toUpperCase());
 
         // Validate that Admin can only create a role inside his/her organization
-        if (role.equals(PilotRole.ADMIN.toString()) && !pilot.equals(userRole.getPilotCode().toString()))
-            return new ResponseEntity<>(ApiResponseInfo.error(UNAUTHORIZED_ACTION, "User of role 'ADMIN' can only delete a role only inside their organization"), HttpStatus.FORBIDDEN);
+        if (role.equalsIgnoreCase(PilotRole.ADMIN.toString()) && !pilot.equalsIgnoreCase(userRole.getPilotCode().toString()))
+            return new ResponseEntity<>(BaseResponse.error(UNAUTHORIZED_ACTION, "User of role 'ADMIN' can only delete a role only inside their organization"), HttpStatus.FORBIDDEN);
 
         // Delete a User Role in Keycloak
-        if (adminService.deleteUserRole(jwt.getTokenValue(), roleName))
-            return new ResponseEntity<>(ApiResponseInfo.success(null,"User role deleted successfully"), HttpStatus.OK);
+        if (adminService.deleteUserRole(jwt.getTokenValue(), roleName.toUpperCase()))
+            return new ResponseEntity<>(BaseResponse.success(null,"User role deleted successfully"), HttpStatus.OK);
         else
-            return new ResponseEntity<>(ApiResponseInfo.error("Unable to delete the user role", "Role not found or an internal error occured"), HttpStatus.INTERNAL_SERVER_ERROR);
+            return new ResponseEntity<>(BaseResponse.error("Unable to delete the user role", "Role not found or an internal error occured"), HttpStatus.INTERNAL_SERVER_ERROR);
     }
 
     /**
-     * Retrievea a User Role in Keycloak
+     * Retrieve a User Role in Keycloak
      *
      * @param jwt : JWT Token
      * @param roleName : Name of the Role
@@ -176,8 +183,8 @@ public class AdminController {
     })
     @PreAuthorize("hasAnyAuthority('ROLE_SUPER_ADMIN', 'ROLE_ADMIN')")
     @GetMapping("/roles/{roleName}")
-    public ResponseEntity<ApiResponseInfo<UserRoleDTO>> retrieveUserRole(@AuthenticationPrincipal Jwt jwt, @PathVariable String roleName) {
-            return new ResponseEntity<>(ApiResponseInfo.success(adminService.retrieveUserRole(jwt.getTokenValue(), roleName),"User role retrieved successfully"), HttpStatus.OK);
+    public ResponseEntity<BaseResponse<UserRoleDTO>> retrieveUserRole(@AuthenticationPrincipal Jwt jwt, @PathVariable String roleName) {
+            return new ResponseEntity<>(BaseResponse.success(adminService.retrieveUserRole(jwt.getTokenValue(), roleName.toUpperCase()),"User role retrieved successfully"), HttpStatus.OK);
     }
 
     /**
@@ -195,34 +202,38 @@ public class AdminController {
             @ApiResponse(responseCode = "403", description = "Invalid authorization parameters. Check JWT or CSRF Token"),
             @ApiResponse(responseCode = "403", description = "Token inserted is invalid. It does not contain any information about the user role or the pilot"),
             @ApiResponse(responseCode = "403", description = "User of role 'ADMIN' can only update a role only inside their organization"),
-            @ApiResponse(responseCode = "403", description = "User of role 'SUPER_ADMIN' can convert a pilot role into 'SUPER_ADMIN'"),
+            @ApiResponse(responseCode = "403", description = "User of role 'SUPER_ADMIN' can only convert a pilot role into 'SUPER_ADMIN'"),
             @ApiResponse(responseCode = "404", description = "User role not found in Keycloak"),
             @ApiResponse(responseCode = "500", description = "Unable to create and store the new role")
     })
     @PreAuthorize("hasAnyAuthority('ROLE_SUPER_ADMIN', 'ROLE_ADMIN')")
     @PutMapping("/roles/{roleName}")
-    public ResponseEntity<ApiResponseInfo<Void>> updateUserRole(@AuthenticationPrincipal Jwt jwt, @PathVariable String roleName, @RequestBody UserRoleDTO userRole) {
+    public ResponseEntity<BaseResponse<Void>> updateUserRole(@AuthenticationPrincipal Jwt jwt, @PathVariable String roleName, @RequestBody UserRoleDTO userRole) {
         // Validate token proper format
         String role = JwtUtils.extractPilotRole(jwt);
         String pilot = JwtUtils.extractPilotCode(jwt);
 
         // Check if JWT contains the proper information
         if (StringUtils.isAnyBlank(role, pilot))
-            return new ResponseEntity<>(ApiResponseInfo.error(INVALID_TOKEN), HttpStatus.FORBIDDEN);
+            return new ResponseEntity<>(BaseResponse.error(INVALID_TOKEN), HttpStatus.FORBIDDEN);
 
         // Validate the only Super-Admins can update Role information to Super-Admin
-        if (userRole.getPilotRole() != null && !role.equals(PilotRole.SUPER_ADMIN.toString()) && userRole.getPilotRole().equals(PilotRole.SUPER_ADMIN))
-            return new ResponseEntity<>(ApiResponseInfo.error(UNAUTHORIZED_ACTION, "User of role 'SUPER_ADMIN' can convert a pilot role into 'SUPER_ADMIN'"), HttpStatus.FORBIDDEN);
+        if (userRole.getPilotRole() != null && !role.equalsIgnoreCase(PilotRole.SUPER_ADMIN.toString()) && userRole.getPilotRole().equals(PilotRole.SUPER_ADMIN))
+            return new ResponseEntity<>(BaseResponse.error(UNAUTHORIZED_ACTION, "User of role 'SUPER_ADMIN' can only convert a pilot role into 'SUPER_ADMIN'"), HttpStatus.FORBIDDEN);
 
         // Validate that Admin can only create a role inside his/her organization
-        if (userRole.getPilotCode() != null && role.equals(PilotRole.ADMIN.toString()) && !pilot.equals(userRole.getPilotCode().toString()))
-            return new ResponseEntity<>(ApiResponseInfo.error(UNAUTHORIZED_ACTION, "User of role 'ADMIN' can only update a role only inside their organization"), HttpStatus.FORBIDDEN);
+        if (userRole.getPilotCode() != null && role.equalsIgnoreCase(PilotRole.ADMIN.toString()) && !pilot.equalsIgnoreCase(userRole.getPilotCode().toString()))
+            return new ResponseEntity<>(BaseResponse.error(UNAUTHORIZED_ACTION, "User of role 'ADMIN' can only update a role only inside their organization"), HttpStatus.FORBIDDEN);
+
+        // If name was given convert it to upper case if not already defined that way
+        if (userRole.getName() != null)
+            userRole.setName(userRole.getName().toUpperCase());
 
         // Create User Role in Keycloak
-        if (adminService.updateUserRole(jwt.getTokenValue(), userRole, roleName))
-            return new ResponseEntity<>(ApiResponseInfo.success(null,"User role updated successfully"), HttpStatus.OK);
+        if (adminService.updateUserRole(jwt.getTokenValue(), userRole, roleName.toUpperCase()))
+            return new ResponseEntity<>(BaseResponse.success(null,"User role updated successfully"), HttpStatus.OK);
         else
-            return new ResponseEntity<>(ApiResponseInfo.error("Unable to update the user role","Role not found or an internal error occured"), HttpStatus.INTERNAL_SERVER_ERROR);
+            return new ResponseEntity<>(BaseResponse.error("Unable to update the user role","Role not found or an internal error occured"), HttpStatus.INTERNAL_SERVER_ERROR);
     }
 
     /**
@@ -240,28 +251,98 @@ public class AdminController {
     })
     @PreAuthorize("hasAuthority('ROLE_SUPER_ADMIN')")
     @GetMapping("/pilots")
-    public ResponseEntity<ApiResponseInfo<List<String>>> getAllPilots(@AuthenticationPrincipal Jwt jwt) {
-        return new ResponseEntity<>(ApiResponseInfo.success(adminService.retrieveAllPilots(jwt.getTokenValue()), "Pilot codes retrieved successfully"), HttpStatus.OK);
+    public ResponseEntity<BaseResponse<List<String>>> getAllPilots(@AuthenticationPrincipal Jwt jwt) {
+        return new ResponseEntity<>(BaseResponse.success(adminService.retrieveAllPilots(jwt.getTokenValue()), "Pilot codes retrieved successfully"), HttpStatus.OK);
     }
 
     /**
-     * GET all Keycloak Pilot Roles
+     * GET all Keycloak User Roles
      *
      * @param jwt : JWT Token
-     * @return List<String> : List of Pilot Roles
+     * @return List<String> : List of User Roles
      */
-    @Operation(summary = "Retrieve all pilot roles from Keycloak")
+    @Operation(summary = "Retrieve all user roles from Keycloak")
     @ApiResponses(value = {
-            @ApiResponse(responseCode = "200", description = "Pilot roles retrieved successfully"),
+            @ApiResponse(responseCode = "200", description = "User roles retrieved successfully"),
             @ApiResponse(responseCode = "400", description = "Invalid request: either credentials or token must be provided!"),
             @ApiResponse(responseCode = "401", description = "Authentication process failed!"),
             @ApiResponse(responseCode = "403", description = "Invalid authorization parameters. Check JWT or CSRF Token")
     })
     @PreAuthorize("hasAuthority('ROLE_SUPER_ADMIN')")
-    @GetMapping("/pilot-roles")
-    public ResponseEntity<ApiResponseInfo<List<String>>> getAllPilotRoles(@AuthenticationPrincipal Jwt jwt) {
-        return new ResponseEntity<>(ApiResponseInfo.success(adminService.retrieveAllPilotRoles(jwt.getTokenValue()), "Pilot roles retrieved successfully"), HttpStatus.OK);
+    @GetMapping("/roles")
+    public ResponseEntity<BaseResponse<List<String>>> getAllUserRoles(@AuthenticationPrincipal Jwt jwt) {
+        return new ResponseEntity<>(BaseResponse.success(adminService.retrieveAllUserRoles(jwt.getTokenValue()), "User roles retrieved successfully"), HttpStatus.OK);
     }
 
+    /**
+     * GET all Keycloak User Roles filter by Pilot
+     *
+     * @param jwt : JWT Token
+     * @param pilotCode : Pilot Code
+     * @return List<String> : List of User Roles
+     */
+    @Operation(summary = "Retrieve all user roles from Keycloak filtered by Pilot Code")
+    @ApiResponses(value = {
+            @ApiResponse(responseCode = "200", description = "User roles retrieved successfully"),
+            @ApiResponse(responseCode = "400", description = "Invalid request: either credentials or token must be provided!"),
+            @ApiResponse(responseCode = "401", description = "Authentication process failed!"),
+            @ApiResponse(responseCode = "403", description = "Invalid authorization parameters. Check JWT or CSRF Token"),
+            @ApiResponse(responseCode = "403", description = "User of role 'USER' can not retrieve information for user roles"),
+            @ApiResponse(responseCode = "403", description = "User of role 'ADMIN' can only retrieve user roles only inside their organization"),
+            @ApiResponse(responseCode = "403", description = "Token inserted is invalid. It does not contain any information about the user role or the pilot")
+    })
+    @GetMapping("/roles/pilot/{pilotCode}")
+    public ResponseEntity<BaseResponse<List<String>>> getAllUserRolesPerPilot(@AuthenticationPrincipal Jwt jwt, @ValidPilotCode @PathVariable String pilotCode) {
+        // Validate token proper format
+        String role = JwtUtils.extractPilotRole(jwt);
+        String pilot = JwtUtils.extractPilotCode(jwt);
+
+        // Check if JWT contains the proper information
+        if (StringUtils.isAnyBlank(role, pilot))
+            return new ResponseEntity<>(BaseResponse.error(INVALID_TOKEN), HttpStatus.FORBIDDEN);
+
+        // Refrain users from retrieving data
+        if (role.equalsIgnoreCase(PilotRole.USER.toString()))
+            return new ResponseEntity<>(BaseResponse.error(UNAUTHORIZED_ACTION, USER_FORBIDDEN), HttpStatus.FORBIDDEN);
+
+        // Validate that Admin can only create a role inside his/her organization
+        if (role.equalsIgnoreCase(PilotRole.ADMIN.toString()) && !pilot.equalsIgnoreCase(pilotCode))
+            return new ResponseEntity<>(BaseResponse.error(UNAUTHORIZED_ACTION, "User of role 'ADMIN' can only retrieve user roles only inside their organization"), HttpStatus.FORBIDDEN);
+
+        return new ResponseEntity<>(BaseResponse.success(adminService.retrieveAllUserRolesByPilot(jwt.getTokenValue(), pilotCode.toUpperCase()), "User roles retrieved successfully"), HttpStatus.OK);
+    }
+
+    /**
+     * GET all users associated with a Role
+     *
+     * @param jwt : JWT Token
+     * @param userRole : User Role
+     * @return List<String> : List of User Roles
+     */
+    @Operation(summary = "Retrieve all users associated with a specific user role")
+    @ApiResponses(value = {
+            @ApiResponse(responseCode = "200", description = "Users associated with the role retrieved successfully"),
+            @ApiResponse(responseCode = "400", description = "Invalid request: either credentials or token must be provided!"),
+            @ApiResponse(responseCode = "401", description = "Authentication process failed!"),
+            @ApiResponse(responseCode = "403", description = "Invalid authorization parameters. Check JWT or CSRF Token"),
+            @ApiResponse(responseCode = "403", description = "User of role 'USER' can not retrieve information for user roles"),
+            @ApiResponse(responseCode = "403", description = "Token inserted is invalid. It does not contain any information about the user role")
+    })
+    @GetMapping("/roles/{userRole}/users")
+    public ResponseEntity<BaseResponse<List<UserDTO>>> getAllUserByUserRole(@AuthenticationPrincipal Jwt jwt, @ValidUserRole @PathVariable String userRole) {
+        // Validate token proper format
+        String role = JwtUtils.extractPilotRole(jwt);
+        String pilot = JwtUtils.extractPilotCode(jwt);
+
+        // Check if JWT contains the proper information
+        if (StringUtils.isAnyBlank(role, pilot))
+            return new ResponseEntity<>(BaseResponse.error(INVALID_TOKEN), HttpStatus.FORBIDDEN);
+
+        // Refrain users from retrieving data
+        if (role.equalsIgnoreCase(PilotRole.USER.toString()))
+            return new ResponseEntity<>(BaseResponse.error(UNAUTHORIZED_ACTION, USER_FORBIDDEN), HttpStatus.FORBIDDEN);
+
+        return new ResponseEntity<>(BaseResponse.success(adminService.retrieveAllUsersByUserRole(jwt.getTokenValue(), userRole.toUpperCase()), "Users associated with the role retrieved successfully"), HttpStatus.OK);
+    }
 
 }

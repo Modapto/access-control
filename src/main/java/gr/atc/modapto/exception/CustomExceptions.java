@@ -21,4 +21,10 @@ public class CustomExceptions {
             super(message);
         }
     }
+
+    public static class InvalidAuthenticationCredentials extends RuntimeException{
+        public InvalidAuthenticationCredentials(String message) {
+            super(message);
+        }
+    }
 }

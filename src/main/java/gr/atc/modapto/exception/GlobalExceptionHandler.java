@@ -17,19 +17,18 @@ import org.springframework.web.bind.MethodArgumentNotValidException;
 import org.springframework.web.bind.annotation.ExceptionHandler;
 import org.springframework.web.bind.annotation.ResponseStatus;
 import org.springframework.web.bind.annotation.RestControllerAdvice;
+import org.springframework.web.method.annotation.HandlerMethodValidationException;
 import org.springframework.web.servlet.resource.NoResourceFoundException;
 
-import gr.atc.modapto.controller.ApiResponseInfo;
-import gr.atc.modapto.exception.CustomExceptions.DataRetrievalException;
-import gr.atc.modapto.exception.CustomExceptions.InvalidActivationAttributes;
-import gr.atc.modapto.exception.CustomExceptions.KeycloakException;
+import gr.atc.modapto.controller.BaseResponse;
+import static gr.atc.modapto.exception.CustomExceptions.*;
 
 @RestControllerAdvice
 public class GlobalExceptionHandler {
 
     @ExceptionHandler(MethodArgumentNotValidException.class)
     @ResponseStatus(HttpStatus.BAD_REQUEST)
-    public ResponseEntity<ApiResponseInfo<Map<String, String>>> handleValidationExceptions(@NotNull
+    public ResponseEntity<BaseResponse<Map<String, String>>> handleValidationExceptions(@NotNull
             MethodArgumentNotValidException ex) {
         Map<String, String> errors = new HashMap<>();
         ex.getBindingResult().getAllErrors().forEach(error -> {
@@ -37,12 +36,12 @@ public class GlobalExceptionHandler {
             String errorMessage = error.getDefaultMessage();
             errors.put(fieldName, errorMessage);
         });
-        return new ResponseEntity<>(ApiResponseInfo.error("Validation failed", errors),
+        return new ResponseEntity<>(BaseResponse.error("Validation failed", errors),
                 HttpStatus.BAD_REQUEST);
     }
 
     @ExceptionHandler(HttpMessageNotReadableException.class)
-    public ResponseEntity<ApiResponseInfo<String>> handleHttpMessageNotReadableException(HttpMessageNotReadableException ex) {
+    public ResponseEntity<BaseResponse<String>> handleHttpMessageNotReadableException(HttpMessageNotReadableException ex) {
         String errorMessage;
 
         // Check if instance is for InvalidFormat Validation
@@ -62,53 +61,66 @@ public class GlobalExceptionHandler {
 
                 return ResponseEntity
                         .badRequest()
-                        .body(ApiResponseInfo.error("Validation failed", errorMessage));
+                        .body(BaseResponse.error("Validation failed", errorMessage));
             }
         }
 
         // Generic error handling
         return ResponseEntity
                 .badRequest()
-                .body(ApiResponseInfo.error("Validation failed"));
+                .body(BaseResponse.error("Validation failed"));
     }
 
     @ExceptionHandler(NoResourceFoundException.class)
     @ResponseStatus(HttpStatus.NOT_FOUND)
-    public ResponseEntity<ApiResponseInfo<String>> resourceNotFound(@NonNull NoResourceFoundException ex){
-        return new ResponseEntity<>(ApiResponseInfo.error("Resource not found", ex.getMessage()), HttpStatus.NOT_FOUND);
+    public ResponseEntity<BaseResponse<String>> resourceNotFound(@NonNull NoResourceFoundException ex){
+        return new ResponseEntity<>(BaseResponse.error("Resource not found", ex.getMessage()), HttpStatus.NOT_FOUND);
+    }
+
+    @ExceptionHandler(HandlerMethodValidationException.class)
+    @ResponseStatus(HttpStatus.BAD_REQUEST)
+    public ResponseEntity<BaseResponse<String>> resourceNotFound(@NonNull HandlerMethodValidationException ex){
+        return new ResponseEntity<>(BaseResponse.error("Validation Error", "Invalid input field"), HttpStatus.BAD_REQUEST);
     }
 
     @ExceptionHandler(AccessDeniedException.class)
     @ResponseStatus(HttpStatus.FORBIDDEN)
-    public ResponseEntity<ApiResponseInfo<Map<String, String>>> invalidSecurityException(@NotNull AccessDeniedException ex) {
-        return new ResponseEntity<>(ApiResponseInfo.error("Invalid authorization parameters. You don't have the rights to access the resource or check the JWT and CSRF Tokens", ex.getCause()),
+    public ResponseEntity<BaseResponse<Map<String, String>>> invalidSecurityException(@NotNull AccessDeniedException ex) {
+        return new ResponseEntity<>(BaseResponse.error("Invalid authorization parameters. You don't have the rights to access the resource or check the JWT and CSRF Tokens", ex.getCause()),
                 HttpStatus.FORBIDDEN);
+    }
+
+    @ExceptionHandler(InvalidAuthenticationCredentials.class)
+    @ResponseStatus(HttpStatus.UNAUTHORIZED)
+    public ResponseEntity<BaseResponse<Map<String, String>>> invalidAuthCredentials(@NotNull InvalidAuthenticationCredentials ex) {
+        return new ResponseEntity<>(BaseResponse.error("Invalid authorization credentials provided.", ex.getCause()),
+                HttpStatus.UNAUTHORIZED);
     }
 
     @ExceptionHandler(InvalidActivationAttributes.class)
     @ResponseStatus(HttpStatus.FORBIDDEN)
-    public ResponseEntity<ApiResponseInfo<Map<String, String>>> invalidActivationAttributes(@NotNull InvalidActivationAttributes ex) {
-        return new ResponseEntity<>(ApiResponseInfo.error(ex.getMessage()), HttpStatus.FORBIDDEN);
+    public ResponseEntity<BaseResponse<Map<String, String>>> invalidActivationAttributes(@NotNull InvalidActivationAttributes ex) {
+        return new ResponseEntity<>(BaseResponse.error(ex.getMessage()), HttpStatus.FORBIDDEN);
     }
 
     @ExceptionHandler(KeycloakException.class)
     @ResponseStatus(HttpStatus.INTERNAL_SERVER_ERROR)
-    public ResponseEntity<ApiResponseInfo<String>> keycloakAccessError(@NotNull KeycloakException ex) {
-        ApiResponseInfo<String> response = ApiResponseInfo.error(ex.getMessage());
+    public ResponseEntity<BaseResponse<String>> keycloakAccessError(@NotNull KeycloakException ex) {
+        BaseResponse<String> response = BaseResponse.error(ex.getMessage());
         return new ResponseEntity<>(response, HttpStatus.INTERNAL_SERVER_ERROR);
     }
 
     @ExceptionHandler(DataRetrievalException.class)
     @ResponseStatus(HttpStatus.NOT_FOUND)
-    public ResponseEntity<ApiResponseInfo<String>> dataRetrievalError(@NotNull DataRetrievalException ex) {
-        ApiResponseInfo<String> response = ApiResponseInfo.error(ex.getMessage());
+    public ResponseEntity<BaseResponse<String>> dataRetrievalError(@NotNull DataRetrievalException ex) {
+        BaseResponse<String> response = BaseResponse.error(ex.getMessage());
         return new ResponseEntity<>(response, HttpStatus.NOT_FOUND);
     }
 
     @ExceptionHandler(Exception.class)
     @ResponseStatus(HttpStatus.INTERNAL_SERVER_ERROR)
-    public ResponseEntity<ApiResponseInfo<String>> handleGeneralException(@NotNull Exception ex) {
-        return new ResponseEntity<>(ApiResponseInfo
+    public ResponseEntity<BaseResponse<String>> handleGeneralException(@NotNull Exception ex) {
+        return new ResponseEntity<>(BaseResponse
                 .error("An unexpected error occurred", ex.getMessage()), HttpStatus.INTERNAL_SERVER_ERROR);
     }
 }

@@ -15,7 +15,7 @@ public interface IUserManagerService {
 
   boolean updateUser(UserDTO userDTO, UserRepresentationDTO existingUser, String userId, String token);
 
-  List<UserDTO> fetchUsers(String token);
+  List<UserDTO> fetchUsers(String token, String pilot);
 
   UserDTO fetchUser(String userId, String token);
 

@@ -64,7 +64,7 @@ public class UserManagerController {
             @ApiResponse(responseCode = "401", description = "Authentication process failed")
     })
     @PostMapping(value = {"/authenticate", "/refresh-token"})
-    public ResponseEntity<ApiResponseInfo<AuthenticationResponseDTO>> authenticateOrRefreshToken(
+    public ResponseEntity<BaseResponse<AuthenticationResponseDTO>> authenticateOrRefreshToken(
             @Valid @RequestBody(required = false) CredentialsDTO credentials,
             @RequestParam(name = "token", required = false) String refreshToken) {
 
@@ -76,15 +76,15 @@ public class UserManagerController {
         } else if (refreshToken != null) {
             response = userManagerService.authenticate(null, refreshToken);
         } else {
-            return new ResponseEntity<>(ApiResponseInfo.error("Invalid request: either credentials or token must be provided!"),
+            return new ResponseEntity<>(BaseResponse.error("Invalid request: either credentials or token must be provided!"),
                     HttpStatus.BAD_REQUEST);
         }
 
         if (response != null) {
-            return new ResponseEntity<>(ApiResponseInfo.success(response, "Authentication token generated successfully"),
+            return new ResponseEntity<>(BaseResponse.success(response, "Authentication token generated successfully"),
                     HttpStatus.OK);
         } else {
-            return new ResponseEntity<>(ApiResponseInfo.error("Authentication process failed"),
+            return new ResponseEntity<>(BaseResponse.error("Authentication process failed"),
                     HttpStatus.UNAUTHORIZED);
         }
     }
@@ -103,7 +103,7 @@ public class UserManagerController {
             @ApiResponse(responseCode = "500", description = "Due to an internal error, user has not been activated!"),
     })
     @PostMapping(value = "/activate")
-    public ResponseEntity<ApiResponseInfo<String>> activateUser(
+    public ResponseEntity<BaseResponse<String>> activateUser(
             @RequestParam String token, @ValidPassword @RequestBody String password) {
 
         // Split the User ID and the Keycloak Activation Token
@@ -111,16 +111,16 @@ public class UserManagerController {
 
         // Ensure token inserted is valid - UserID # Activation Token
         if (tokenData.size() != 2)
-            return new ResponseEntity<>(ApiResponseInfo.error("Invalid token was given as parameter."), HttpStatus.BAD_REQUEST);
+            return new ResponseEntity<>(BaseResponse.error("Invalid token was given as parameter."), HttpStatus.BAD_REQUEST);
 
         String userId = tokenData.getFirst();
         String activationToken = tokenData.getLast();
 
         if (userManagerService.activateUser(userId, activationToken, password))
-            return new ResponseEntity<>(ApiResponseInfo.success(null, "User activated and password updated successfully."),
+            return new ResponseEntity<>(BaseResponse.success(null, "User activated and password updated successfully."),
                     HttpStatus.OK);
         else
-            return new ResponseEntity<>(ApiResponseInfo.error(null, "Due to an internal error, user has not been activated!"),
+            return new ResponseEntity<>(BaseResponse.error(null, "Due to an internal error, user has not been activated!"),
                     HttpStatus.INTERNAL_SERVER_ERROR);
 
     }
@@ -139,13 +139,13 @@ public class UserManagerController {
             @ApiResponse(responseCode = "403", description = "Invalid authorization parameters. Check JWT or CSRF Token"),
     })
     @PostMapping(value = "/logout")
-    public ResponseEntity<ApiResponseInfo<String>> logoutUser(
+    public ResponseEntity<BaseResponse<String>> logoutUser(
             @AuthenticationPrincipal Jwt jwt) {
 
         String token = jwt.getTokenValue();
         String userId = JwtUtils.extractUserId(jwt);
         userManagerService.logoutUser(userId, token);
-        return new ResponseEntity<>(ApiResponseInfo.success(null, "User logged out successfully"),
+        return new ResponseEntity<>(BaseResponse.success(null, "User logged out successfully"),
                 HttpStatus.OK);
     }
 
@@ -175,29 +175,29 @@ public class UserManagerController {
     })
     @PreAuthorize("hasAnyAuthority('ROLE_SUPER_ADMIN', 'ROLE_ADMIN')")
     @PostMapping(value = "/create")
-    public ResponseEntity<ApiResponseInfo<String>> createUser(
+    public ResponseEntity<BaseResponse<String>> createUser(
             @RequestBody UserDTO user,
             @AuthenticationPrincipal Jwt jwt) {
 
         // Ensure that all required fields are given to create a new user
         if (userMissingRequiredFields(user))
-            return new ResponseEntity<>(ApiResponseInfo.error("You should provide all fields to create a new user"),
+            return new ResponseEntity<>(BaseResponse.error("You should provide all fields to create a new user"),
                     HttpStatus.BAD_REQUEST);
 
         // Ensure that if only Super Admins can create new Super Admins
-        if(user.getPilotRole().equals(PilotRole.SUPER_ADMIN) && !JwtUtils.extractPilotRole(jwt).equals(PilotRole.SUPER_ADMIN.toString()))
-            return new ResponseEntity<>(ApiResponseInfo.error("Unauthorized action","Only Super Admins can create other Super Admin roles."),
+        if(user.getPilotRole().equals(PilotRole.SUPER_ADMIN) && !JwtUtils.extractPilotRole(jwt).equalsIgnoreCase(PilotRole.SUPER_ADMIN.toString()))
+            return new ResponseEntity<>(BaseResponse.error("Unauthorized action","Only Super Admins can create other Super Admin roles."),
                     HttpStatus.FORBIDDEN);
 
         // Ensure that Admins can create personnel only inside their organization
-        if(JwtUtils.extractPilotRole(jwt).equals(PilotRole.ADMIN.toString()) && !JwtUtils.extractPilotCode(jwt).equals(user.getPilotCode().toString()))
-            return new ResponseEntity<>(ApiResponseInfo.error("Unauthorized action","Admins can only create personnel inside their organization"),
+        if(JwtUtils.extractPilotRole(jwt).equals(PilotRole.ADMIN.toString()) && !JwtUtils.extractPilotCode(jwt).equalsIgnoreCase(user.getPilotCode().toString()))
+            return new ResponseEntity<>(BaseResponse.error("Unauthorized action","Admins can only create personnel inside their organization"),
                     HttpStatus.FORBIDDEN);
 
         // Ensure that user doesn't exist in Auth Server
         UserRepresentationDTO keycloakUser = userManagerService.retrieveUserByEmail(user.getEmail(), jwt.getTokenValue());
         if (keycloakUser != null)
-            return new ResponseEntity<>(ApiResponseInfo.error("User already exists in Keycloak"),
+            return new ResponseEntity<>(BaseResponse.error("User already exists in Keycloak"),
                     HttpStatus.EXPECTATION_FAILED);
 
         // Create activation token
@@ -214,10 +214,10 @@ public class UserManagerController {
             String activationToken = userId.concat("@").concat(user.getActivationToken()); // Token in activation Link will be: User ID + # + Activation Token
             emailService.sendActivationLink(user.getUsername(), user.getEmail(), activationToken);
 
-            return new ResponseEntity<>(ApiResponseInfo.success(userId, "User created successfully in Keycloak"),
+            return new ResponseEntity<>(BaseResponse.success(userId, "User created successfully in Keycloak"),
                     HttpStatus.CREATED);
         } else {
-            return new ResponseEntity<>(ApiResponseInfo.error("Unable to create user in Keycloak"),
+            return new ResponseEntity<>(BaseResponse.error("Unable to create user in Keycloak"),
                     HttpStatus.INTERNAL_SERVER_ERROR);
         }
     }
@@ -242,34 +242,34 @@ public class UserManagerController {
             @ApiResponse(responseCode = "500", description = "Unable to update user in Keycloak")
     })
      @PutMapping(value = "/update")
-     public ResponseEntity<ApiResponseInfo<String>> updateUser(@RequestBody UserDTO user, @AuthenticationPrincipal Jwt jwt, @RequestParam String userId) {
+     public ResponseEntity<BaseResponse<String>> updateUser(@RequestBody UserDTO user, @AuthenticationPrincipal Jwt jwt, @RequestParam String userId) {
         String jwtUserId = JwtUtils.extractUserId(jwt);
         String jwtRole = JwtUtils.extractPilotRole(jwt);
         String jwtPilot = JwtUtils.extractPilotCode(jwt);
 
         UserRepresentationDTO existingUser = userManagerService.retrieveUserById(userId,jwt.getTokenValue());
         if (existingUser == null)
-            return new ResponseEntity<>(ApiResponseInfo.error("User not found in Keycloak"),
+            return new ResponseEntity<>(BaseResponse.error("User not found in Keycloak"),
                     HttpStatus.EXPECTATION_FAILED);
 
         UserDTO existingUserDTO = UserRepresentationDTO.toUserDTO(existingUser);
 
         // Validate that a user can only update his personal info or admins can update user's inside their organization
         if (jwtUserId == null || jwtRole == null || jwtPilot == null)
-            return new ResponseEntity<>(ApiResponseInfo.error("Token is invalid. No information regarding user ID or role was found"),
+            return new ResponseEntity<>(BaseResponse.error("Token is invalid. No information regarding user ID or role was found"),
                     HttpStatus.FORBIDDEN);
         else if (jwtRole.equals(PilotRole.USER.toString()) && !jwtUserId.equals(userId))
-            return new ResponseEntity<>(ApiResponseInfo.error("User of type 'USER' can only update his personal information"),
+            return new ResponseEntity<>(BaseResponse.error("User of type 'USER' can only update his personal information"),
                     HttpStatus.FORBIDDEN);
-        else if (jwtRole.equals(PilotRole.ADMIN.toString()) && !jwtPilot.equals(existingUserDTO.getPilotCode().toString()))
-            return new ResponseEntity<>(ApiResponseInfo.error("User of type 'ADMIN' can only update user's inside their organization"),
+        else if (jwtRole.equals(PilotRole.ADMIN.toString()) && !jwtPilot.equalsIgnoreCase(existingUserDTO.getPilotCode().toString()))
+            return new ResponseEntity<>(BaseResponse.error("User of type 'ADMIN' can only update user's inside their organization"),
                     HttpStatus.FORBIDDEN);
 
         // Update users
         if (userManagerService.updateUser(user, null, userId, jwt.getTokenValue()))
-            return new ResponseEntity<>(ApiResponseInfo.success(null, "User updated successfully"), HttpStatus.OK);
+            return new ResponseEntity<>(BaseResponse.success(null, "User updated successfully"), HttpStatus.OK);
         else
-            return new ResponseEntity<>(ApiResponseInfo.error("Unable to update user in Keycloak"),
+            return new ResponseEntity<>(BaseResponse.error("Unable to update user in Keycloak"),
                     HttpStatus.INTERNAL_SERVER_ERROR);
      }
 
@@ -291,18 +291,18 @@ public class UserManagerController {
             @ApiResponse(responseCode = "500", description = "Unable to update user's password in Keycloak")
     })
      @PutMapping(value = "/change-password")
-     public ResponseEntity<ApiResponseInfo<String>> changePassword(@RequestBody UserDTO user, @AuthenticationPrincipal Jwt jwt) {
+     public ResponseEntity<BaseResponse<String>> changePassword(@RequestBody UserDTO user, @AuthenticationPrincipal Jwt jwt) {
         // We utilize the Validation of password inside the UserDTO class. If password is missing then we return an error
          if (user.getPassword() == null)
-             return new ResponseEntity<>(ApiResponseInfo.error("Password is missing"),
+             return new ResponseEntity<>(BaseResponse.error("Password is missing"),
                      HttpStatus.BAD_REQUEST);
 
          String userId = JwtUtils.extractUserId(jwt);
          if (userManagerService.changePassword(user.getPassword(), userId, jwt.getTokenValue()))
-             return new ResponseEntity<>(ApiResponseInfo.success(null,"User's password updated successfully"),
+             return new ResponseEntity<>(BaseResponse.success(null,"User's password updated successfully"),
                  HttpStatus.OK);
          else
-            return new ResponseEntity<>(ApiResponseInfo.error("Unable to update user's password in Keycloak"),
+            return new ResponseEntity<>(BaseResponse.error("Unable to update user's password in Keycloak"),
                  HttpStatus.INTERNAL_SERVER_ERROR);
      }
 
@@ -319,11 +319,15 @@ public class UserManagerController {
             @ApiResponse(responseCode = "400", description = "Invalid request: Either credentials or token must be provided!"),
             @ApiResponse(responseCode = "400", description = "An unexpected error occured"),
             @ApiResponse(responseCode = "403", description = "Invalid authorization parameters. Check JWT or CSRF Token"),
+            @ApiResponse(responseCode = "403", description = "Token inserted is invalid. It does not contain any information about the pilot")
     })
     @PreAuthorize("hasAnyAuthority('ROLE_SUPER_ADMIN', 'ROLE_ADMIN')")
     @GetMapping
-    public ResponseEntity<ApiResponseInfo<List<UserDTO>>> fetchUsers(@AuthenticationPrincipal Jwt jwt) {
-        return new ResponseEntity<>(ApiResponseInfo.success(userManagerService.fetchUsers(jwt.getTokenValue()), "Users retrieved successfully"), HttpStatus.OK);
+    public ResponseEntity<BaseResponse<List<UserDTO>>> fetchUsers(@AuthenticationPrincipal Jwt jwt) {
+        String pilot = JwtUtils.extractPilotCode(jwt);
+        if (pilot == null)
+            return new ResponseEntity<>(BaseResponse.error("Token inserted is invalid. It does not contain any information about the pilot"), HttpStatus.FORBIDDEN);
+        return new ResponseEntity<>(BaseResponse.success(userManagerService.fetchUsers(jwt.getTokenValue(), pilot), "Users retrieved successfully"), HttpStatus.OK);
     }
 
     /**
@@ -343,8 +347,8 @@ public class UserManagerController {
     })
     @PreAuthorize("hasAnyAuthority('ROLE_SUPER_ADMIN', 'ROLE_ADMIN')")
     @GetMapping("/search")
-    public ResponseEntity<ApiResponseInfo<UserDTO>> fetchUser(@RequestParam String userId, @AuthenticationPrincipal Jwt jwt) {
-        return new ResponseEntity<>(ApiResponseInfo.success(userManagerService.fetchUser(userId, jwt.getTokenValue()), "User retrieved successfully"), HttpStatus.OK);
+    public ResponseEntity<BaseResponse<UserDTO>> fetchUser(@RequestParam String userId, @AuthenticationPrincipal Jwt jwt) {
+        return new ResponseEntity<>(BaseResponse.success(userManagerService.fetchUser(userId, jwt.getTokenValue()), "User retrieved successfully"), HttpStatus.OK);
     }
 
     /**
@@ -365,12 +369,12 @@ public class UserManagerController {
     })
     @PreAuthorize("hasAuthority('ROLE_SUPER_ADMIN')")
     @DeleteMapping("/delete")
-    public ResponseEntity<ApiResponseInfo<String>> deleteUser(@RequestParam String userId, @AuthenticationPrincipal Jwt jwt) {
+    public ResponseEntity<BaseResponse<String>> deleteUser(@RequestParam String userId, @AuthenticationPrincipal Jwt jwt) {
         if(userManagerService.deleteUser(userId, jwt.getTokenValue()))
-            return new ResponseEntity<>(ApiResponseInfo.success(null, "User deleted successfully"),
+            return new ResponseEntity<>(BaseResponse.success(null, "User deleted successfully"),
                     HttpStatus.OK);
         else
-            return new ResponseEntity<>(ApiResponseInfo.error("Unable to delete user from Keycloak"),
+            return new ResponseEntity<>(BaseResponse.error("Unable to delete user from Keycloak"),
                     HttpStatus.INTERNAL_SERVER_ERROR);
     }
 
@@ -385,18 +389,25 @@ public class UserManagerController {
       @ApiResponse(responseCode = "200", description = "User IDs retrieved successfully"),
       @ApiResponse(responseCode = "400", description = "Invalid request: Either credentials or token must be provided!"),
       @ApiResponse(responseCode = "400", description = "An unexpected error occured"),
-      @ApiResponse(responseCode = "403", description = "Invalid authorization parameters. Check JWT or CSRF Token"),
+            @ApiResponse(responseCode = "403", description = "Token inserted is invalid. It does not contain any information about the pilot"),
+      @ApiResponse(responseCode = "403", description = "Invalid authorization parameters. Check JWT or CSRF Token")
     })
+    @PreAuthorize("hasAnyAuthority('ROLE_SUPER_ADMIN', 'ROLE_ADMIN')")
     @GetMapping("/ids")
-    public ResponseEntity<ApiResponseInfo<List<String>>> getAllUserIds(@AuthenticationPrincipal Jwt jwt) {
-      List<UserDTO> users = userManagerService.fetchUsers(jwt.getTokenValue());
-      return new ResponseEntity<>(ApiResponseInfo.success(users.stream().map(UserDTO::getUserId).toList(), "User IDs retrieved successfully"), HttpStatus.OK);
+    public ResponseEntity<BaseResponse<List<String>>> getAllUserIds(@AuthenticationPrincipal Jwt jwt) {
+        String pilot = JwtUtils.extractPilotCode(jwt);
+        if (pilot == null)
+            return new ResponseEntity<>(BaseResponse.error("Token inserted is invalid. It does not contain any information about the pilot"), HttpStatus.FORBIDDEN);
+
+        List<UserDTO> users = userManagerService.fetchUsers(jwt.getTokenValue(), pilot);
+        return new ResponseEntity<>(BaseResponse.success(users.stream().map(UserDTO::getUserId).toList(), "User IDs retrieved successfully"), HttpStatus.OK);
     }
 
     /**
-     * Retrieve all user IDs from Keycloak
+     * Retrieve all user IDs from Keycloak filtered by a specific User Role
      *
      * @param jwt: JWT Token
+     * @param userRole : User Role
      * @return List<UserDTO>
      */
     @Operation(summary = "Retrieve all user IDs from Keycloak")
@@ -407,10 +418,11 @@ public class UserManagerController {
       @ApiResponse(responseCode = "403", description = "Invalid authorization parameters. Check JWT or CSRF Token"),
             @ApiResponse(responseCode = "500", description = "Unable to locate requested client ID in Keycloak")
     })
-    @GetMapping("/ids/role/{realmRole}")
-    public ResponseEntity<ApiResponseInfo<List<String>>> getAllUserIdsByUserRole(@AuthenticationPrincipal Jwt jwt, @ValidUserRole @PathVariable String realmRole) {
-      List<UserDTO> users = userManagerService.fetchUsersByRole(realmRole, jwt.getTokenValue());
-      return new ResponseEntity<>(ApiResponseInfo.success(users.stream().map(UserDTO::getUserId).toList(), "User IDs for role " + realmRole + " retrieved successfully"), HttpStatus.OK);
+    @PreAuthorize("hasAnyAuthority('ROLE_SUPER_ADMIN', 'ROLE_ADMIN')")
+    @GetMapping("/ids/role/{userRole}")
+    public ResponseEntity<BaseResponse<List<String>>> getAllUserIdsByUserRole(@AuthenticationPrincipal Jwt jwt, @ValidUserRole @PathVariable String userRole) {
+      List<UserDTO> users = userManagerService.fetchUsersByRole(userRole.toUpperCase(), jwt.getTokenValue());
+      return new ResponseEntity<>(BaseResponse.success(users.stream().map(UserDTO::getUserId).toList(), "User IDs for role " + userRole + " retrieved successfully"), HttpStatus.OK);
     }
 
     /**

@@ -1,6 +1,6 @@
 package gr.atc.modapto.integration;
 
-import gr.atc.modapto.controller.ApiResponseInfo;
+import gr.atc.modapto.controller.BaseResponse;
 import gr.atc.modapto.controller.UserManagerController;
 import gr.atc.modapto.dto.AuthenticationResponseDTO;
 import gr.atc.modapto.dto.CredentialsDTO;
@@ -42,7 +42,7 @@ class AdminControllerIntegrationTests {
                 .password("Test123@")
                 .build();
 
-        ResponseEntity<ApiResponseInfo<AuthenticationResponseDTO>> response = userManagerController.authenticateOrRefreshToken(credentials, null);
+        ResponseEntity<BaseResponse<AuthenticationResponseDTO>> response = userManagerController.authenticateOrRefreshToken(credentials, null);
         if (response != null && response.getBody() != null && response.getBody().getData() != null)
             jwt = response.getBody().getData().getAccessToken();
     }

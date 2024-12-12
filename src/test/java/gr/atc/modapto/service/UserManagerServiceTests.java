@@ -502,7 +502,7 @@ class UserManagerServiceTests {
             .thenReturn(new ResponseEntity<>(mockResponseBody, HttpStatus.OK));
 
     // When
-    List<UserDTO> result = userManagerService.fetchUsers(MOCK_TOKEN);
+    List<UserDTO> result = userManagerService.fetchUsers(MOCK_TOKEN, "ALL");
 
     // Then
     assertNotNull(result);

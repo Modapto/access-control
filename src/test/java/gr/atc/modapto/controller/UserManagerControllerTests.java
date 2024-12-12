@@ -449,7 +449,7 @@ class UserManagerControllerTests {
     @Test
     void givenValidJwt_whenFetchUsers_thenReturnListOfUsers() throws Exception {
         // Given
-        given(userManagerService.fetchUsers(anyString())).willReturn(List.of(user));
+        given(userManagerService.fetchUsers(anyString(), anyString())).willReturn(List.of(user));
 
         // Mock JWT authentication
         JwtAuthenticationToken jwtAuthenticationToken = new JwtAuthenticationToken(jwt, List.of(new SimpleGrantedAuthority("ROLE_ADMIN")));
@@ -469,7 +469,7 @@ class UserManagerControllerTests {
     @Test
     void givenValidJwt_whenGetAllUserIds_thenReturnListOfUserIds() throws Exception {
         // Given
-        given(userManagerService.fetchUsers(anyString())).willReturn(List.of(user));
+        given(userManagerService.fetchUsers(anyString(), anyString())).willReturn(List.of(user));
 
         // Mock JWT authentication
         JwtAuthenticationToken jwtAuthenticationToken = new JwtAuthenticationToken(jwt, List.of(new SimpleGrantedAuthority("ROLE_ADMIN")));

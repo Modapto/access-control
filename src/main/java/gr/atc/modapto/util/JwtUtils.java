@@ -54,7 +54,7 @@ public class JwtUtils {
         if (jwt == null || jwt.getClaimAsString(PILOT_CODE) == null) {
             return null;
         }
-        return jwt.getClaimAsString(PILOT_CODE);
+        return jwt.getClaimAsStringList(PILOT_CODE).getFirst();
     }
 
     /**
@@ -67,7 +67,7 @@ public class JwtUtils {
         if (jwt == null || jwt.getClaimAsString(PILOT_ROLE) == null) {
             return null;
         }
-        return jwt.getClaimAsString(PILOT_ROLE);
+        return jwt.getClaimAsStringList(PILOT_ROLE).getFirst();
     }
 
     /**
@@ -93,7 +93,7 @@ public class JwtUtils {
         if (jwt == null || jwt.getClaimAsString(USER_ROLE) == null) {
             return null;
         }
-        return jwt.getClaimAsString(USER_ROLE);
+        return jwt.getClaimAsStringList(USER_ROLE).getFirst();
     }
 
     /**

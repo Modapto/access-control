@@ -5,10 +5,9 @@ import java.util.Collections;
 import java.util.List;
 import java.util.Map;
 
+import gr.atc.modapto.dto.UserDTO;
 import gr.atc.modapto.dto.UserRoleDTO;
 import gr.atc.modapto.dto.keycloak.*;
-import gr.atc.modapto.enums.PilotCode;
-import gr.atc.modapto.enums.PilotRole;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
@@ -58,9 +57,9 @@ class AdminServiceTests {
         ReflectionTestUtils.setField(adminService, "restTemplate", restTemplate);
     }
 
-    @DisplayName("Retrieve all user roles: Success")
+    @DisplayName("Retrieve all pilot roles: Success")
     @Test
-    void givenValidJwt_whenGetAllUserRoles_thenReturnUserRoles() {
+    void givenValidJwt_whenGetAllPilotRoles_thenReturnPilotRoles() {
         List<RealmRoleDTO> mockRoles = Arrays.asList(
                 new RealmRoleDTO("1", "ADMIN", null, false, false, null),
                 new RealmRoleDTO("2", "USER", null, false, false, null),
@@ -76,7 +75,7 @@ class AdminServiceTests {
                 any(ParameterizedTypeReference.class)
         )).thenReturn(mockResponse);
 
-        List<String> result = adminService.retrieveAllUserRoles(MOCK_TOKEN, true);
+        List<String> result = adminService.retrieveAllPilotRoles(MOCK_TOKEN, true);
 
         assertEquals(2, result.size());
         assertTrue(result.contains("ADMIN"));
@@ -84,9 +83,9 @@ class AdminServiceTests {
         assertFalse(result.contains("default-roles-modapto-dev"));
     }
 
-    @DisplayName("Retrieve all user roles: Empty Response - Fail")
+    @DisplayName("Retrieve all pilot roles: Empty Response - Fail")
     @Test
-    void givenEmptyResponse_whenGetAllUserRoles_thenReturnEmptyList() {
+    void givenEmptyResponse_whenGetAllPilotRoles_thenReturnEmptyList() {
         ResponseEntity<List<RealmRoleDTO>> mockResponse = new ResponseEntity<>(Collections.emptyList(), HttpStatus.OK);
 
         when(restTemplate.exchange(
@@ -96,7 +95,7 @@ class AdminServiceTests {
                 any(ParameterizedTypeReference.class)
         )).thenReturn(mockResponse);
 
-        List<String> result = adminService.retrieveAllUserRoles(MOCK_TOKEN, true);
+        List<String> result = adminService.retrieveAllPilotRoles(MOCK_TOKEN, true);
 
         assertTrue(result.isEmpty());
     }
@@ -104,6 +103,10 @@ class AdminServiceTests {
     @DisplayName("Retrieve all user roles: Invalid Response - Fail")
     @Test
     void givenInvalidResponse_whenGetAllUserRoles_thenReturnEmptyList() {
+        //Given
+        when(keycloakSupportService.getClientId()).thenReturn("client-id");
+
+        // When
         when(restTemplate.exchange(
                 anyString(),
                 eq(HttpMethod.GET),
@@ -112,8 +115,8 @@ class AdminServiceTests {
         )).thenThrow(new HttpClientErrorException(HttpStatus.BAD_REQUEST));
 
 
-        // When - Then
-        assertThrows(CustomExceptions.KeycloakException.class, () -> adminService.retrieveAllUserRoles(MOCK_TOKEN, true));
+        // Then
+        assertThrows(CustomExceptions.KeycloakException.class, () -> adminService.retrieveAllUserRoles(MOCK_TOKEN));
     }
 
     @DisplayName("Retrieve all pilots: Success")
@@ -140,9 +143,9 @@ class AdminServiceTests {
         assertTrue(result.contains("CRF"));
     }
 
-    @DisplayName("Retrieve all pilot roles: Success")
+    @DisplayName("Retrieve all user roles: Success")
     @Test
-    void givenValidJwt_whenGetAllPilotRoles_thenReturnPilotRoles() {
+    void givenValidJwt_whenGetAllUserRoles_thenReturnUserRoles() {
         List<ClientRoleDTO> mockRoles = Arrays.asList(
                 new ClientRoleDTO("1", "OPERATOR", null, false, false),
                 new ClientRoleDTO("2", "LOGISTICS_MANAGER", null, false, false)
@@ -152,23 +155,23 @@ class AdminServiceTests {
 
         when(keycloakSupportService.getClientId()).thenReturn("client-id");
 
-        when(restTemplate.exchange(
+        lenient().when(restTemplate.exchange(
                 eq(MOCK_ADMIN_URI + "/clients/client-id/roles"),
                 eq(HttpMethod.GET),
                 any(),
                 any(ParameterizedTypeReference.class)
         )).thenReturn(mockRoleResponse);
 
-        List<String> result = adminService.retrieveAllPilotRoles(MOCK_TOKEN);
+        List<String> result = adminService.retrieveAllUserRoles(MOCK_TOKEN);
 
         assertEquals(2, result.size());
         assertTrue(result.contains("OPERATOR"));
         assertTrue(result.contains("LOGISTICS_MANAGER"));
     }
 
-    @DisplayName("Retrieve all pilot roles: Client Not Found - Fail")
+    @DisplayName("Retrieve all user roles: Client Not Found - Fail")
     @Test
-    void givenClientNotFound_whenGetAllPilotRoles_thenReturnEmptyList() {
+    void givenClientNotFound_whenGetAllUserRoles_thenReturnEmptyList() {
         ResponseEntity<List<ClientDTO>> mockClientResponse = new ResponseEntity<>(Collections.emptyList(), HttpStatus.OK);
 
         when(keycloakSupportService.getClientId()).thenReturn(null);
@@ -180,7 +183,7 @@ class AdminServiceTests {
                 any(ParameterizedTypeReference.class)
         )).thenReturn(mockClientResponse);
 
-        List<String> result = adminService.retrieveAllPilotRoles(MOCK_TOKEN);
+        List<String> result = adminService.retrieveAllUserRoles(MOCK_TOKEN);
 
         assertTrue(result.isEmpty());
     }
@@ -372,7 +375,138 @@ class AdminServiceTests {
         assertTrue(response);
     }
 
+    @DisplayName("Retrieve All User Roles By Pilot: Success")
+    @Test
+    void givenValidJwtAndPilotCode_whenRetrieveAllUserRolesByPilot_thenReturnSuccess() {
+        // Given
+        String mockToken = "mock-jwt-token";
+        String pilotCode = "SEW";
+        String mockClientId = "test-client-id";
+        String mockGroupId = "test-group-id";
 
+        // Mock dependencies
+        when(keycloakSupportService.getClientId()).thenReturn(mockClientId);
+        when(keycloakSupportService.retrievePilotCodeID(pilotCode, mockToken)).thenReturn(mockGroupId);
+
+        // Prepare test data
+        List<RoleRepresentationDTO> mockRoles = Arrays.asList(
+                RoleRepresentationDTO.builder().name("OPERATOR").build(),
+                RoleRepresentationDTO.builder().name("MANAGER").build()
+        );
+
+        String expectedUri = MOCK_ADMIN_URI + "/groups/" + mockGroupId + "/role-mappings/clients/" + mockClientId;
+
+        // Mock the response
+        ResponseEntity<List<RoleRepresentationDTO>> mockResponse = new ResponseEntity<>(mockRoles, HttpStatus.OK);
+        when(restTemplate.exchange(
+                eq(expectedUri),
+                eq(HttpMethod.GET),
+                any(HttpEntity.class),
+                any(ParameterizedTypeReference.class)
+        )).thenReturn(mockResponse);
+
+        // When
+        List<String> retrievedRoles = adminService.retrieveAllUserRolesByPilot(mockToken, pilotCode);
+
+        // Then
+        assertNotNull(retrievedRoles);
+        assertEquals(2, retrievedRoles.size());
+        assertTrue(retrievedRoles.contains("OPERATOR"));
+        assertTrue(retrievedRoles.contains("MANAGER"));
+    }
+
+    @DisplayName("Retrieve All User Roles By Pilot: Failure due to Client ID Not Found")
+    @Test
+    void givenValidJwtAndPilotCode_whenRetrieveAllUserRolesByPilot_thenThrowDataRetrievalException() {
+        // Given
+        String mockToken = "mock-jwt-token";
+        String pilotCode = "SEW";
+
+        // Mock dependencies
+        when(keycloakSupportService.getClientId()).thenReturn(null);
+
+        // When & Then
+        assertThrows(CustomExceptions.DataRetrievalException.class, () -> {
+            adminService.retrieveAllUserRolesByPilot(mockToken, pilotCode);
+        });
+
+        // Verify interactions
+        verify(keycloakSupportService).getClientId();
+        verifyNoInteractions(restTemplate);
+    }
+
+    @DisplayName("Retrieve All Users By User Role: Success")
+    @Test
+    void givenValidJwtAndUserRole_whenRetrieveAllUsersByUserRole_thenReturnSuccess() {
+        // Given
+        String mockToken = "mock-jwt-token";
+        String userRole = "ADMIN_ROLE";
+        String mockClientId = "test-client-id";
+
+        // Mock dependencies
+        when(keycloakSupportService.getClientId()).thenReturn(mockClientId);
+
+        // Prepare test data
+        List<UserRepresentationDTO> mockUsers = Arrays.asList(
+                UserRepresentationDTO.builder()
+                        .username("user1")
+                        .email("user1@example.com")
+                        .build(),
+                UserRepresentationDTO.builder()
+                        .username("user2")
+                        .email("user2@example.com")
+                        .build()
+        );
+
+        String expectedUri = MOCK_ADMIN_URI + "/clients/" + mockClientId + "/roles/" + userRole + "/users";
+
+        // Mock the response
+        ResponseEntity<List<UserRepresentationDTO>> mockResponse = new ResponseEntity<>(mockUsers, HttpStatus.OK);
+        when(restTemplate.exchange(
+                eq(expectedUri),
+                eq(HttpMethod.GET),
+                any(HttpEntity.class),
+                any(ParameterizedTypeReference.class)
+        )).thenReturn(mockResponse);
+
+        // When
+        List<UserDTO> retrievedUsers = adminService.retrieveAllUsersByUserRole(mockToken, userRole);
+
+        // Then
+        assertNotNull(retrievedUsers);
+        assertEquals(2, retrievedUsers.size());
+        assertEquals("user1", retrievedUsers.get(0).getUsername());
+        assertEquals("user2", retrievedUsers.get(1).getUsername());
+
+        // Verify interactions
+        verify(keycloakSupportService).getClientId();
+        verify(restTemplate).exchange(
+                eq(expectedUri),
+                eq(HttpMethod.GET),
+                any(HttpEntity.class),
+                any(ParameterizedTypeReference.class)
+        );
+    }
+
+    @DisplayName("Retrieve All Users By User Role: Failure due to Client ID Not Found")
+    @Test
+    void givenValidJwtAndUserRole_whenRetrieveAllUsersByUserRole_thenThrowDataRetrievalException() {
+        // Given
+        String mockToken = "mock-jwt-token";
+        String userRole = "ADMIN_ROLE";
+
+        // Mock dependencies
+        when(keycloakSupportService.getClientId()).thenReturn(null);
+
+        // When & Then
+        assertThrows(CustomExceptions.DataRetrievalException.class, () -> {
+            adminService.retrieveAllUsersByUserRole(mockToken, userRole);
+        });
+
+        // Verify interactions
+        verify(keycloakSupportService).getClientId();
+        verifyNoInteractions(restTemplate);
+    }
 
 
 }

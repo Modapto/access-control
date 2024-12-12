@@ -1,6 +1,7 @@
 package gr.atc.modapto.service;
 
 import gr.atc.modapto.dto.keycloak.ClientDTO;
+import gr.atc.modapto.dto.keycloak.GroupDTO;
 import gr.atc.modapto.exception.CustomExceptions;
 import jakarta.annotation.PostConstruct;
 import lombok.extern.slf4j.Slf4j;
@@ -148,6 +149,49 @@ public class KeycloakSupportService {
             throw new CustomExceptions.KeycloakException("HTTP error during retrieval of client ID", e);
         } catch (RestClientException e) {
             log.error("Error during retrieval of client ID: {}", e.getMessage(), e);
+            throw new CustomExceptions.KeycloakException("Error during retrieval of client ID", e);
+        }
+    }
+
+    /**
+     * Retrieve Group ID for a given Pilot Code
+     *
+     * @param token : JWT Token Value
+     * @return String : Client ID
+     */
+    public String retrievePilotCodeID(String pilot, String token){
+        try {
+            // Set Headers
+            HttpHeaders headers = new HttpHeaders();
+            headers.setBearerAuth(token);
+            headers.setContentType(MediaType.APPLICATION_JSON);
+
+            HttpEntity<Object> entity = new HttpEntity<>(headers);
+
+            // Retrieve Group ID from Keycloak
+            String requestUri = adminUri.concat("/groups");
+            ResponseEntity<List<GroupDTO>> response = restTemplate.exchange(
+                    requestUri,
+                    HttpMethod.GET,
+                    entity,
+                    new ParameterizedTypeReference<>() {}
+            );
+
+            // Valid Resposne
+            if (response.getStatusCode().is2xxSuccessful() && response.getBody() != null )
+                return response.getBody().stream()
+                        .filter(group -> group.getName().equals(pilot))
+                        .map(GroupDTO::getId)
+                        .findFirst()
+                        .orElse(null);
+
+            // Invalid Response return null
+            return null;
+        } catch (HttpClientErrorException | HttpServerErrorException e) {
+            log.error("HTTP error during retrieval of group ID: {}", e.getMessage(), e);
+            throw new CustomExceptions.KeycloakException("HTTP error during retrieval of client ID", e);
+        } catch (RestClientException e) {
+            log.error("Error during retrieval of group ID: {}", e.getMessage(), e);
             throw new CustomExceptions.KeycloakException("Error during retrieval of client ID", e);
         }
     }

@@ -140,7 +140,7 @@ public class UserManagerService implements IUserManagerService {
             return null;
         } catch (HttpClientErrorException | HttpServerErrorException e) {
             log.error("HTTP error during authentication process: {}, Response body: {}", e.getMessage(), e.getResponseBodyAsString(), e);
-            throw new KeycloakException("HTTP error during authentication process", e);
+            throw new InvalidAuthenticationCredentials("HTTP error during authentication process");
         } catch (RestClientException e) {
             log.error("Unable to retrieve token information from Keycloak. Error: {}", e.getMessage());
             throw new KeycloakException("Unable to retrieve token information from Keycloak", e);
@@ -237,7 +237,7 @@ public class UserManagerService implements IUserManagerService {
      * @return List<UserDTO>
      */
     @Override
-    public List<UserDTO> fetchUsers(String token) {
+    public List<UserDTO> fetchUsers(String token, String pilot) {
         try {
             // Set Headers
             HttpHeaders headers = new HttpHeaders();
@@ -256,7 +256,10 @@ public class UserManagerService implements IUserManagerService {
             );
 
             if (response.getStatusCode().is2xxSuccessful() && response.getBody() != null && !response.getBody().isEmpty())
-                return response.getBody().stream().map(UserRepresentationDTO::toUserDTO).toList();
+                if (pilot.equals("ALL"))
+                    return response.getBody().stream().map(UserRepresentationDTO::toUserDTO).toList();
+                else
+                    return response.getBody().stream().map(UserRepresentationDTO::toUserDTO).filter(user -> pilot.equals(user.getPilotCode().toString())).toList();
 
             return Collections.emptyList();
         } catch (HttpClientErrorException | HttpServerErrorException e) {

@@ -1,5 +1,6 @@
 package gr.atc.modapto.service;
 
+import gr.atc.modapto.dto.UserDTO;
 import gr.atc.modapto.dto.UserRoleDTO;
 import gr.atc.modapto.dto.keycloak.*;
 import lombok.extern.slf4j.Slf4j;
@@ -37,13 +38,13 @@ public class AdminService implements IAdminService {
     }
 
     /**
-     * Retrieve all User Roles from Keycloak
+     * Retrieve all Pilot Roles from Keycloak
      *
      * @param token : JWT Token value
-     * @return List<String> : User Roles
+     * @return List<String> : Pilot Roles
      */
     @Override
-    public List<String> retrieveAllUserRoles(String token, boolean isSuperAdmin) {
+    public List<String> retrieveAllPilotRoles(String token, boolean isSuperAdmin) {
         try {
             // Set Headers
             HttpHeaders headers = new HttpHeaders();
@@ -122,13 +123,13 @@ public class AdminService implements IAdminService {
     }
 
     /**
-     * Retrieve all Pilot Roles from Keycloak
+     * Retrieve all User Roles from Keycloak
      *
      * @param token : JWT Token value
-     * @return List<String> : Pilot Roles
+     * @return List<String> : User Roles
      */
     @Override
-    public List<String> retrieveAllPilotRoles(String token) {
+    public List<String> retrieveAllUserRoles(String token) {
         try {
             // Set Headers
             HttpHeaders headers = new HttpHeaders();
@@ -161,11 +162,11 @@ public class AdminService implements IAdminService {
             // Invalid Response return empty List
             return Collections.emptyList();
         } catch (HttpClientErrorException | HttpServerErrorException e) {
-            log.error("HTTP error during retrieval of pilot roles: {}", e.getMessage(), e);
-            throw new KeycloakException("HTTP error during retrieval of pilot roles", e);
+            log.error("HTTP error during retrieval of user roles: {}", e.getMessage(), e);
+            throw new KeycloakException("HTTP error during retrieval of user roles", e);
         } catch (RestClientException e) {
-            log.error("Error during retrieval of pilot roles: {}", e.getMessage(), e);
-            throw new KeycloakException("Error during retrieval of pilot roles", e);
+            log.error("Error during retrieval of user roles: {}", e.getMessage(), e);
+            throw new KeycloakException("Error during retrieval of user roles", e);
         }
     }
 
@@ -334,6 +335,108 @@ public class AdminService implements IAdminService {
     }
 
     /**
+     * Retrieve all user roles from Keycloak connected to a specific Group (Pilot Code)
+     *
+     * @param tokenValue : JWT token value
+     * @param pilotCode : Pilot Code
+     * @return List<String> of User Roles
+     */
+    @Override
+    public List<String> retrieveAllUserRolesByPilot(String tokenValue, String pilotCode) {
+        // Retrieve clientId and check if is not null
+        String clientId = keycloakSupportService.getClientId();
+        if (clientId == null)
+            throw new DataRetrievalException("Unable to locate client ID in Keycloak");
+
+        // Retrieve Group ID
+        String groupId = keycloakSupportService.retrievePilotCodeID(pilotCode, tokenValue);
+        if (groupId == null)
+            throw new DataRetrievalException("Unable to locate requested group ID in Keycloak");
+
+        // Set Headers
+        HttpHeaders headers = new HttpHeaders();
+        headers.setBearerAuth(tokenValue);
+        headers.setContentType(MediaType.APPLICATION_JSON);
+
+        HttpEntity<Void> entity = new HttpEntity<>(headers);
+
+        // Create the URI and make the GET request
+        StringBuilder requestUri = new StringBuilder();
+        requestUri.append(adminUri).append("/groups/").append(groupId).append("/role-mappings/clients/").append(clientId);
+        try{
+            ResponseEntity<List<RoleRepresentationDTO>> response = restTemplate.exchange(
+                    requestUri.toString(),
+                    HttpMethod.GET,
+                    entity,
+                    new ParameterizedTypeReference<>() {}
+            );
+
+            // Return true if response is Successful
+            if (response.getStatusCode().is2xxSuccessful() && response.getBody() != null )
+                return response.getBody().stream()
+                        .map(RoleRepresentationDTO::getName)
+                        .toList();
+
+            return Collections.emptyList();
+        } catch (HttpClientErrorException | HttpServerErrorException e) {
+            log.error("HTTP error during retrieving user role per pilot: {}", e.getMessage(), e);
+            throw new KeycloakException("HTTP error during retrieving user role per pilot", e);
+        } catch (RestClientException e) {
+            log.error("Error during retrieving user role per pilot: {}", e.getMessage(), e);
+            throw new KeycloakException("Error during retrieving user role per pilot", e);
+        }
+    }
+
+    /**
+     * Retrieve all users from Keycloak connected to a specific User Role (Client Role)
+     *
+     * @param tokenValue : JWT token value
+     * @param userRole : Client Role
+     * @return List<UserDTO> of Users
+     */
+    @Override
+    public List<UserDTO> retrieveAllUsersByUserRole(String tokenValue, String userRole) {
+        // Retrieve clientId and check if is not null
+        String clientId = keycloakSupportService.getClientId();
+        if (clientId == null)
+            throw new DataRetrievalException("Unable to locate client ID in Keycloak");
+
+
+        // Set Headers
+        HttpHeaders headers = new HttpHeaders();
+        headers.setBearerAuth(tokenValue);
+        headers.setContentType(MediaType.APPLICATION_JSON);
+
+        HttpEntity<Void> entity = new HttpEntity<>(headers);
+
+        // Create the URI and make the GET request
+        StringBuilder requestUri = new StringBuilder();
+        requestUri.append(adminUri).append("/clients/").append(clientId).append("/roles/").append(userRole).append("/users");
+        try{
+            ResponseEntity<List<UserRepresentationDTO>> response = restTemplate.exchange(
+                    requestUri.toString(),
+                    HttpMethod.GET,
+                    entity,
+                    new ParameterizedTypeReference<>() {}
+            );
+
+            // Return true if response is Successful
+            if (response.getStatusCode().is2xxSuccessful() && response.getBody() != null )
+                return response.getBody().stream()
+                        .map(UserRepresentationDTO::toUserDTO)
+                        .toList();
+
+            return Collections.emptyList();
+        } catch (HttpClientErrorException | HttpServerErrorException e) {
+            log.error("HTTP error during retrieving users in specific role: {}", e.getMessage(), e);
+            throw new KeycloakException("HTTP error during retrieving users in specific role", e);
+        } catch (RestClientException e) {
+            log.error("Error during retrieving users in specific role: {}", e.getMessage(), e);
+            throw new KeycloakException("Error during retrieving users in specific role", e);
+        }
+    }
+
+    /**
      * Assign a User Role to a specific Group - Pilot Code
      *
      * @param userRole : User Role to assign
@@ -344,7 +447,7 @@ public class AdminService implements IAdminService {
     @Override
     public boolean assignUserRoleToPilot(String userRole, String pilotCode, String clientId, String token) {
         // Retrieve Group ID
-        String groupId = retrievePilotCodeID(pilotCode, token);
+        String groupId = keycloakSupportService.retrievePilotCodeID(pilotCode, token);
         if (groupId == null)
             throw new DataRetrievalException("Unable to locate requested group ID in Keycloak");
 
@@ -420,50 +523,6 @@ public class AdminService implements IAdminService {
         } catch (RestClientException e) {
             log.error("Error during locating role information: {}", e.getMessage(), e);
             throw new KeycloakException("Error during locating role information", e);
-        }
-    }
-
-
-    /**
-     * Retrieve Group ID for a given Pilot Code
-     *
-     * @param token : JWT Token Value
-     * @return String : Client ID
-     */
-    private String retrievePilotCodeID(String pilot, String token){
-        try {
-            // Set Headers
-            HttpHeaders headers = new HttpHeaders();
-            headers.setBearerAuth(token);
-            headers.setContentType(MediaType.APPLICATION_JSON);
-
-            HttpEntity<Object> entity = new HttpEntity<>(headers);
-
-            // Retrieve Group ID from Keycloak
-            String requestUri = adminUri.concat("/groups");
-            ResponseEntity<List<GroupDTO>> response = restTemplate.exchange(
-                    requestUri,
-                    HttpMethod.GET,
-                    entity,
-                    new ParameterizedTypeReference<>() {}
-            );
-
-            // Valid Resposne
-            if (response.getStatusCode().is2xxSuccessful() && response.getBody() != null )
-                return response.getBody().stream()
-                        .filter(group -> group.getName().equals(pilot))
-                        .map(GroupDTO::getId)
-                        .findFirst()
-                        .orElse(null);
-
-            // Invalid Response return null
-            return null;
-        } catch (HttpClientErrorException | HttpServerErrorException e) {
-            log.error("HTTP error during retrieval of group ID: {}", e.getMessage(), e);
-            throw new KeycloakException("HTTP error during retrieval of client ID", e);
-        } catch (RestClientException e) {
-            log.error("Error during retrieval of group ID: {}", e.getMessage(), e);
-            throw new KeycloakException("Error during retrieval of client ID", e);
         }
     }
 
