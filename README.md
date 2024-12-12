@@ -31,7 +31,7 @@ It exploits OAuth2.0 and OpenID protocols integrated with Spring Security with c
     mvn install
     ```
 
-3. Instantiate an instance of Keycloak with PostgreSQL and configure the following variables:
+3. Instantiate an instance of Keycloak with PostgreSQL and configure the following variables in the application properties:
 
     ```sh
    spring.security.oauth2.resourceserver.jwt.issuer-uri=${KC_ISSUER_URI:###}
@@ -44,7 +44,31 @@ It exploits OAuth2.0 and OpenID protocols integrated with Spring Security with c
    keycloak.admin-password=${KC_ADMIN_PASSWORD:###}
    keycloak.realm=${KC_REALM:###}
    keycloak.auth-server-url=${KC_AUTH_SERVER:###}
+   spring.mail.username = ${GMAIL_USERNAME:MODAPTO}
+   spring.mail.password = ${GMAIL_APP_PASSWORD:###}
     ```
+
+4. If deployed via Docker Compose file the following variables must be set in the .env file:
+
+    ```sh
+    POSTGRES_USER=
+    POSTGRES_PASSWORD=
+    KEYCLOAK_ADMIN_USER=
+    KEYCLOAK_ADMIN_PASSWORD=
+    PGADMIN_DEFAULT_EMAIL=
+    PGADMIN_DEFAULT_PASSWORD=
+    HOST_IP=
+    MAIL_USERNAME=
+    MAIL_PASSWORD=
+    ```
+
+5. Upon the usage of the Component, when creating a new User, an activation process is followed as displayed below:
+
+    a. Super Admin / Admin creates a new User
+
+    b. An activation token and expiration time are generated as attributes of User, which is initialized as disabled User
+
+    c. An email is sent to the designated email address with the token value that must be passed along with the new password for the user to be enabled to MODAPTO system.
 
 ### Usage
 
