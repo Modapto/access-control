@@ -8,9 +8,9 @@
     "email" : "crf@test.com",
     "emailVerified" : true,
     "attributes" : {
-      "pilot_type" : [ "USER" ],
-      "pilot" : [ "CRF" ],
-      "pilot_role" : [ "OPERATOR" ]
+      "pilot_role" : [ "USER" ],
+      "pilot_code" : [ "CRF" ],
+      "user_role" : [ "OPERATOR" ]
     },
     "createdTimestamp" : 1726492243200,
     "enabled" : true,
@@ -37,6 +37,11 @@
     "lastName" : "Super",
     "email" : "superadmin@admin.com",
     "emailVerified" : true,
+    "attributes" : {
+      "pilot_role" : [ "SUPER_ADMIN" ],
+      "pilot_code" : [ "ALL" ],
+      "user_role" : [ "SUPER_ADMIN" ]
+    },
     "createdTimestamp" : 1719578064439,
     "enabled" : true,
     "totp" : false,

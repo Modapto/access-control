@@ -1,6 +1,6 @@
 package gr.atc.modapto.config;
 
-import java.util.Collections;
+import java.util.Arrays;
 
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
@@ -81,9 +81,11 @@ public class SecurityConfig {
         @Bean
         public CorsConfigurationSource corsConfigurationSource() {
                 CorsConfiguration configuration = new CorsConfiguration();
-                configuration.setAllowedOrigins(Collections.singletonList("*")); // For now we enable all Origins until the finalized version
-                configuration.setAllowedMethods(Collections.singletonList("*"));
-                configuration.setAllowedHeaders(Collections.singletonList("*"));
+                configuration.setAllowedOrigins(Arrays.asList(
+             "http://localhost:3000",
+                  "https://services.modapto.atc.gr",
+                  "http://10.151.64.136:8093"));
+                configuration.setAllowedHeaders(Arrays.asList("*"));
                 configuration.setAllowCredentials(true);
                 UrlBasedCorsConfigurationSource source = new UrlBasedCorsConfigurationSource();
                 source.registerCorsConfiguration("/**", configuration);
