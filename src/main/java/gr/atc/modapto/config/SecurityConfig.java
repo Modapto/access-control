@@ -83,6 +83,7 @@ public class SecurityConfig {
                 CorsConfiguration configuration = new CorsConfiguration();
                 configuration.setAllowedOrigins(Arrays.asList(
              "http://localhost:3000",
+                  "https://dashboard.modapto.atc.gr",
                   "https://services.modapto.atc.gr",
                   "http://10.151.64.136:8093"));
                   configuration.setAllowedMethods(Arrays.asList("GET", "POST", "PUT", "DELETE", "OPTIONS"));
