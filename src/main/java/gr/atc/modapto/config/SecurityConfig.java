@@ -85,8 +85,10 @@ public class SecurityConfig {
              "http://localhost:3000",
                   "https://services.modapto.atc.gr",
                   "http://10.151.64.136:8093"));
+                  configuration.setAllowedMethods(Arrays.asList("GET", "POST", "PUT", "DELETE", "OPTIONS"));
                 configuration.setAllowedHeaders(Arrays.asList("*"));
                 configuration.setAllowCredentials(true);
+                configuration.setMaxAge(86400L);
                 UrlBasedCorsConfigurationSource source = new UrlBasedCorsConfigurationSource();
                 source.registerCorsConfiguration("/**", configuration);
                 return source;
