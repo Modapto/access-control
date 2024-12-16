@@ -4,10 +4,6 @@ import java.util.List;
 import java.util.UUID;
 import java.util.concurrent.CompletableFuture;
 
-import gr.atc.modapto.enums.PilotRole;
-import gr.atc.modapto.service.IEmailService;
-import gr.atc.modapto.validation.ValidPassword;
-import jakarta.validation.Valid;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.security.access.prepost.PreAuthorize;
@@ -28,14 +24,18 @@ import gr.atc.modapto.dto.AuthenticationResponseDTO;
 import gr.atc.modapto.dto.CredentialsDTO;
 import gr.atc.modapto.dto.UserDTO;
 import gr.atc.modapto.dto.keycloak.UserRepresentationDTO;
+import gr.atc.modapto.enums.PilotRole;
+import gr.atc.modapto.service.IEmailService;
 import gr.atc.modapto.service.IUserManagerService;
 import gr.atc.modapto.util.JwtUtils;
+import gr.atc.modapto.validation.ValidPassword;
 import gr.atc.modapto.validation.ValidUserRole;
 import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.media.Content;
 import io.swagger.v3.oas.annotations.media.Schema;
 import io.swagger.v3.oas.annotations.responses.ApiResponse;
 import io.swagger.v3.oas.annotations.responses.ApiResponses;
+import jakarta.validation.Valid;
 import lombok.AllArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 
@@ -50,35 +50,51 @@ public class UserManagerController {
     private final IEmailService emailService;
 
     /**
-     * POST user credentials to generate a token from Keycloak or refresh token to generate a new access token
+     * POST user credentials to generate a token from Keycloak
      *
-     * @param credentials -> With email and password
+     * @param credentials : Email and password of user
      * @return AuthenticationResponse
      */
-    @Operation(summary = "Authenticate user given credentials or refresh token")
+    @Operation(summary = "Authenticate user given credentials")
     @ApiResponses(value = {
             @ApiResponse(responseCode = "200", description = "Authentication token generated successfully", content = {
                     @Content(mediaType = "application/json", schema = @Schema(implementation = AuthenticationResponseDTO.class))}),
-            @ApiResponse(responseCode = "400", description = "Invalid request: either credentials or token must be provided!"),
             @ApiResponse(responseCode = "400", description = "Validation failed"),
             @ApiResponse(responseCode = "401", description = "Authentication process failed")
     })
-    @PostMapping(value = {"/authenticate", "/refresh-token"})
-    public ResponseEntity<BaseResponse<AuthenticationResponseDTO>> authenticateOrRefreshToken(
-            @Valid @RequestBody(required = false) CredentialsDTO credentials,
-            @RequestParam(name = "token", required = false) String refreshToken) {
+    @PostMapping(value = "/authenticate")
+    public ResponseEntity<BaseResponse<AuthenticationResponseDTO>> authenticateUser(
+            @Valid @RequestBody CredentialsDTO credentials){
 
-        AuthenticationResponseDTO response;
+        AuthenticationResponseDTO response = userManagerService.authenticate(credentials, null);
 
-        // Check if credentials are provided for authentication, else use refreshToken
-        if (credentials != null) {
-            response = userManagerService.authenticate(credentials, null);
-        } else if (refreshToken != null) {
-            response = userManagerService.authenticate(null, refreshToken);
+        if (response != null) {
+            return new ResponseEntity<>(BaseResponse.success(response, "Authentication token generated successfully"),
+                    HttpStatus.OK);
         } else {
-            return new ResponseEntity<>(BaseResponse.error("Invalid request: either credentials or token must be provided!"),
-                    HttpStatus.BAD_REQUEST);
+            return new ResponseEntity<>(BaseResponse.error("Authentication process failed"),
+                    HttpStatus.UNAUTHORIZED);
         }
+    }
+
+    /**
+     * POST refresh token to refresh user's token before expiration
+     *
+     * @param token : Refresh Token
+     * @return AuthenticationResponse
+     */
+    @Operation(summary = "Refresh user Token")
+    @ApiResponses(value = {
+            @ApiResponse(responseCode = "200", description = "Authentication token generated successfully", content = {
+                    @Content(mediaType = "application/json", schema = @Schema(implementation = AuthenticationResponseDTO.class))}),
+            @ApiResponse(responseCode = "400", description = "Validation failed"),
+            @ApiResponse(responseCode = "401", description = "Authentication process failed")
+    })
+    @PostMapping(value = "/refresh-token")
+    public ResponseEntity<BaseResponse<AuthenticationResponseDTO>> authenticateOrRefreshToken(
+            @RequestParam(name = "token") String refreshToken) {
+
+        AuthenticationResponseDTO response = userManagerService.authenticate(null, refreshToken);
 
         if (response != null) {
             return new ResponseEntity<>(BaseResponse.success(response, "Authentication token generated successfully"),
