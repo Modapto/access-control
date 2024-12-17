@@ -43,7 +43,7 @@ services:
       postgres_db:
         condition: service_healthy
     healthcheck:
-      test: ["CMD-SHELL", "curl --fail --silent ${KEYCLOAK_ISSUER_URI} || exit 1"]
+      test: ["CMD-SHELL", "curl --fail --silent ${KEYCLOAK_ISSUER_TEST_URI} || exit 1"]
       interval: 5s
       timeout: 10s
       retries: 20

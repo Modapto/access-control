@@ -1,22 +1,31 @@
 package gr.atc.modapto.service;
 
-import gr.atc.modapto.dto.UserDTO;
-import gr.atc.modapto.dto.UserRoleDTO;
-import gr.atc.modapto.dto.keycloak.*;
-import lombok.extern.slf4j.Slf4j;
+import java.util.Collections;
+import java.util.List;
+
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.core.ParameterizedTypeReference;
-import org.springframework.http.*;
+import org.springframework.http.HttpEntity;
+import org.springframework.http.HttpHeaders;
+import org.springframework.http.HttpMethod;
+import org.springframework.http.MediaType;
+import org.springframework.http.ResponseEntity;
 import org.springframework.stereotype.Service;
 import org.springframework.web.client.HttpClientErrorException;
 import org.springframework.web.client.HttpServerErrorException;
 import org.springframework.web.client.RestClientException;
 import org.springframework.web.client.RestTemplate;
 
-import static gr.atc.modapto.exception.CustomExceptions.*;
-
-import java.util.Collections;
-import java.util.List;
+import gr.atc.modapto.dto.UserDTO;
+import gr.atc.modapto.dto.UserRoleDTO;
+import gr.atc.modapto.dto.keycloak.ClientRoleDTO;
+import gr.atc.modapto.dto.keycloak.GroupDTO;
+import gr.atc.modapto.dto.keycloak.RealmRoleDTO;
+import gr.atc.modapto.dto.keycloak.RoleRepresentationDTO;
+import gr.atc.modapto.dto.keycloak.UserRepresentationDTO;
+import gr.atc.modapto.exception.CustomExceptions.DataRetrievalException;
+import gr.atc.modapto.exception.CustomExceptions.KeycloakException;
+import lombok.extern.slf4j.Slf4j;
 
 @Service
 @Slf4j
@@ -51,7 +60,7 @@ public class AdminService implements IAdminService {
             headers.setBearerAuth(token);
             headers.setContentType(MediaType.APPLICATION_JSON);
 
-            HttpEntity<Object> entity = new HttpEntity<>(headers);
+            HttpEntity<Void> entity = new HttpEntity<>(headers);
 
             String requestUri = adminUri.concat("/roles");
             ResponseEntity<List<RealmRoleDTO>> response = restTemplate.exchange(
@@ -95,7 +104,7 @@ public class AdminService implements IAdminService {
             headers.setBearerAuth(token);
             headers.setContentType(MediaType.APPLICATION_JSON);
 
-            HttpEntity<Object> entity = new HttpEntity<>(headers);
+            HttpEntity<Void> entity = new HttpEntity<>(headers);
 
             String requestUri = adminUri.concat("/groups");
             ResponseEntity<List<GroupDTO>> response = restTemplate.exchange(
@@ -136,7 +145,7 @@ public class AdminService implements IAdminService {
             headers.setBearerAuth(token);
             headers.setContentType(MediaType.APPLICATION_JSON);
 
-            HttpEntity<Object> entity = new HttpEntity<>(headers);
+            HttpEntity<Void> entity = new HttpEntity<>(headers);
 
             // Retrieve Client ID
             String clientId = keycloakSupportService.getClientId();

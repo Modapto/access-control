@@ -1,26 +1,28 @@
 package gr.atc.modapto.integration;
 
-import gr.atc.modapto.controller.BaseResponse;
-import gr.atc.modapto.controller.UserManagerController;
-import gr.atc.modapto.dto.AuthenticationResponseDTO;
-import gr.atc.modapto.dto.CredentialsDTO;
+import static org.hamcrest.Matchers.hasItem;
+import static org.hamcrest.Matchers.is;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.test.autoconfigure.web.servlet.AutoConfigureMockMvc;
 import org.springframework.boot.test.context.SpringBootTest;
-import org.springframework.http.*;
+import org.springframework.http.HttpHeaders;
+import org.springframework.http.MediaType;
+import org.springframework.http.ResponseEntity;
 import org.springframework.test.context.ActiveProfiles;
 import org.springframework.test.web.servlet.MockMvc;
 import org.springframework.test.web.servlet.ResultActions;
-
-
-import static org.hamcrest.Matchers.*;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.get;
 import static org.springframework.test.web.servlet.result.MockMvcResultHandlers.print;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.jsonPath;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.status;
+
+import gr.atc.modapto.controller.BaseResponse;
+import gr.atc.modapto.controller.UserManagerController;
+import gr.atc.modapto.dto.AuthenticationResponseDTO;
+import gr.atc.modapto.dto.CredentialsDTO;
 
 @SpringBootTest(webEnvironment = SpringBootTest.WebEnvironment.RANDOM_PORT)
 @AutoConfigureMockMvc
@@ -42,7 +44,7 @@ class AdminControllerIntegrationTests {
                 .password("Test123@")
                 .build();
 
-        ResponseEntity<BaseResponse<AuthenticationResponseDTO>> response = userManagerController.authenticateOrRefreshToken(credentials, null);
+        ResponseEntity<BaseResponse<AuthenticationResponseDTO>> response = userManagerController.authenticateUser(credentials);
         if (response != null && response.getBody() != null && response.getBody().getData() != null)
             jwt = response.getBody().getData().getAccessToken();
     }

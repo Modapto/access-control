@@ -19,9 +19,13 @@ import org.springframework.web.bind.annotation.ResponseStatus;
 import org.springframework.web.bind.annotation.RestControllerAdvice;
 import org.springframework.web.method.annotation.HandlerMethodValidationException;
 import org.springframework.web.servlet.resource.NoResourceFoundException;
+import org.springframework.web.bind.MissingServletRequestParameterException;
 
 import gr.atc.modapto.controller.BaseResponse;
-import static gr.atc.modapto.exception.CustomExceptions.*;
+import gr.atc.modapto.exception.CustomExceptions.DataRetrievalException;
+import gr.atc.modapto.exception.CustomExceptions.InvalidActivationAttributes;
+import gr.atc.modapto.exception.CustomExceptions.InvalidAuthenticationCredentials;
+import gr.atc.modapto.exception.CustomExceptions.KeycloakException;
 
 @RestControllerAdvice
 public class GlobalExceptionHandler {
@@ -77,9 +81,15 @@ public class GlobalExceptionHandler {
         return new ResponseEntity<>(BaseResponse.error("Resource not found", ex.getMessage()), HttpStatus.NOT_FOUND);
     }
 
+    @ExceptionHandler(MissingServletRequestParameterException.class)
+    @ResponseStatus(HttpStatus.BAD_REQUEST)
+    public ResponseEntity<BaseResponse<String>> inputNotProvidedException(@NonNull MissingServletRequestParameterException ex){
+        return new ResponseEntity<>(BaseResponse.error("Invalid / No input was given for requested resource", ex.getMessage()), HttpStatus.BAD_REQUEST);
+    }
+
     @ExceptionHandler(HandlerMethodValidationException.class)
     @ResponseStatus(HttpStatus.BAD_REQUEST)
-    public ResponseEntity<BaseResponse<String>> resourceNotFound(@NonNull HandlerMethodValidationException ex){
+    public ResponseEntity<BaseResponse<String>> validationException(@NonNull HandlerMethodValidationException ex){
         return new ResponseEntity<>(BaseResponse.error("Validation Error", "Invalid input field"), HttpStatus.BAD_REQUEST);
     }
 

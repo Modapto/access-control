@@ -78,15 +78,20 @@ public class SecurityConfig {
          * 
          * @return CorsConfigurationSource
          */
+        /**
+         * Settings for CORS
+         *
+         * @return CorsConfigurationSource
+         */
         @Bean
         public CorsConfigurationSource corsConfigurationSource() {
                 CorsConfiguration configuration = new CorsConfiguration();
                 configuration.setAllowedOrigins(Arrays.asList(
-             "http://localhost:3000",
-                  "https://dashboard.modapto.atc.gr",
-                  "https://services.modapto.atc.gr",
-                  "http://10.151.64.136:8093"));
-                  configuration.setAllowedMethods(Arrays.asList("GET", "POST", "PUT", "DELETE", "OPTIONS"));
+                        "http://localhost:3000",
+                        "https://dashboard.modapto.atc.gr",
+                        "https://services.modapto.atc.gr",
+                        "http://10.151.64.136:8093"));
+                configuration.setAllowedMethods(Arrays.asList("GET", "POST", "PUT", "DELETE", "OPTIONS"));
                 configuration.setAllowedHeaders(Arrays.asList("*"));
                 configuration.setAllowCredentials(true);
                 configuration.setMaxAge(86400L);

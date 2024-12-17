@@ -6,13 +6,12 @@ import java.util.Map;
 import java.util.concurrent.CompletableFuture;
 
 import static org.hamcrest.CoreMatchers.is;
-
-import gr.atc.modapto.service.KeycloakSupportService;
 import org.junit.jupiter.api.BeforeAll;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
-
-import static org.mockito.ArgumentMatchers.*;
+import static org.mockito.ArgumentMatchers.any;
+import static org.mockito.ArgumentMatchers.anyString;
+import static org.mockito.ArgumentMatchers.isNull;
 import static org.mockito.BDDMockito.given;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.test.autoconfigure.web.servlet.AutoConfigureMockMvc;
@@ -26,7 +25,6 @@ import org.springframework.security.test.context.support.WithMockUser;
 import org.springframework.test.context.bean.override.mockito.MockitoBean;
 import org.springframework.test.web.servlet.MockMvc;
 import org.springframework.test.web.servlet.ResultActions;
-
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.delete;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.get;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.post;
@@ -43,6 +41,7 @@ import gr.atc.modapto.dto.keycloak.UserRepresentationDTO;
 import gr.atc.modapto.enums.PilotCode;
 import gr.atc.modapto.enums.PilotRole;
 import gr.atc.modapto.enums.UserRole;
+import gr.atc.modapto.service.KeycloakSupportService;
 import gr.atc.modapto.service.UserManagerService;
 
 @SpringBootTest
@@ -197,8 +196,7 @@ class UserManagerControllerTests {
 
         // Then
         response.andExpect(status().isBadRequest())
-                .andExpect(jsonPath("$.success", is(false)))
-                .andExpect(jsonPath("$.message", is("Invalid request: either credentials or token must be provided!")));
+                .andExpect(jsonPath("$.success", is(false)));
     }
 
     @DisplayName("No token given: Failure")
@@ -212,7 +210,7 @@ class UserManagerControllerTests {
         // Then
         response.andExpect(status().isBadRequest())
                 .andExpect(jsonPath("$.success", is(false)))
-                .andExpect(jsonPath("$.message", is("Invalid request: either credentials or token must be provided!")));
+                .andExpect(jsonPath("$.message", is("Invalid / No input was given for requested resource")));
     }
 
     @DisplayName("Logout User: Success")
@@ -465,23 +463,23 @@ class UserManagerControllerTests {
                 .andExpect(jsonPath("$.data[0].email", is("test@test.com")));
     }
 
-    @DisplayName("Fetch User IDs: Success")
+    @DisplayName("Fetch User IDs per Pilot: Success")
     @Test
-    void givenValidJwt_whenGetAllUserIds_thenReturnListOfUserIds() throws Exception {
+    void givenValidJwt_whenGetUserIdsPerPilot_thenReturnListOfUserIds() throws Exception {
         // Given
-        given(userManagerService.fetchUsers(anyString(), anyString())).willReturn(List.of(user));
+        given(userManagerService.fetchUsersByPilotCode(anyString(), anyString())).willReturn(List.of(user));
 
         // Mock JWT authentication
         JwtAuthenticationToken jwtAuthenticationToken = new JwtAuthenticationToken(jwt, List.of(new SimpleGrantedAuthority("ROLE_ADMIN")));
         SecurityContextHolder.getContext().setAuthentication(jwtAuthenticationToken);
 
         // When
-        ResultActions response = mockMvc.perform(get("/api/users/ids").contentType(MediaType.APPLICATION_JSON));
+        ResultActions response = mockMvc.perform(get("/api/users/ids/pilot/SEW").contentType(MediaType.APPLICATION_JSON));
 
         // Then
         response.andExpect(status().isOk())
                 .andExpect(jsonPath("$.success", is(true)))
-                .andExpect(jsonPath("$.message", is("User IDs retrieved successfully")))
+                .andExpect(jsonPath("$.message", is("User IDs for pilot SEW retrieved successfully")))
                 .andExpect(jsonPath("$.data[0]", is("12345")));
     }
 

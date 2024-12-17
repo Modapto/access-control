@@ -33,7 +33,9 @@ public interface IUserManagerService {
 
   CompletableFuture<Void> logoutUser(String userId, String token);
 
-  List<UserDTO> fetchUsersByRole(String realmRole, String tokenValue);
+  List<UserDTO> fetchUsersByRole(String userRole, String tokenValue);
+
+  List<UserDTO> fetchUsersByPilotCode(String pilotCode, String tokenValue);
 
   boolean activateUser(String userId, String activationToken, String password);
 }

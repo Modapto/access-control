@@ -1,13 +1,12 @@
 package gr.atc.modapto.service;
 
-import java.util.*;
+import java.util.Collections;
+import java.util.List;
+import java.util.Map;
+import java.util.NoSuchElementException;
+import java.util.Objects;
 import java.util.concurrent.CompletableFuture;
 
-import gr.atc.modapto.dto.keycloak.CredentialRepresentationDTO;
-import gr.atc.modapto.dto.keycloak.RoleRepresentationDTO;
-import gr.atc.modapto.dto.keycloak.UserRepresentationDTO;
-
-import gr.atc.modapto.enums.PilotRole;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.core.ParameterizedTypeReference;
 import org.springframework.http.HttpEntity;
@@ -27,9 +26,14 @@ import org.springframework.web.client.RestTemplate;
 import gr.atc.modapto.dto.AuthenticationResponseDTO;
 import gr.atc.modapto.dto.CredentialsDTO;
 import gr.atc.modapto.dto.UserDTO;
-
-import static gr.atc.modapto.exception.CustomExceptions.*;
-
+import gr.atc.modapto.dto.keycloak.CredentialRepresentationDTO;
+import gr.atc.modapto.dto.keycloak.RoleRepresentationDTO;
+import gr.atc.modapto.dto.keycloak.UserRepresentationDTO;
+import gr.atc.modapto.enums.PilotRole;
+import gr.atc.modapto.exception.CustomExceptions.DataRetrievalException;
+import gr.atc.modapto.exception.CustomExceptions.InvalidActivationAttributes;
+import gr.atc.modapto.exception.CustomExceptions.InvalidAuthenticationCredentials;
+import gr.atc.modapto.exception.CustomExceptions.KeycloakException;
 import lombok.extern.slf4j.Slf4j;
 
 @Service
@@ -244,7 +248,7 @@ public class UserManagerService implements IUserManagerService {
             headers.setBearerAuth(token);
             headers.setContentType(MediaType.APPLICATION_JSON);
 
-            HttpEntity<UserRepresentationDTO> entity = new HttpEntity<>(null, headers);
+            HttpEntity<Void> entity = new HttpEntity<>(headers);
 
             String requestUri = adminUri.concat("/users");
             ResponseEntity<List<UserRepresentationDTO>> response = restTemplate.exchange(
@@ -286,7 +290,7 @@ public class UserManagerService implements IUserManagerService {
             headers.setBearerAuth(token);
             headers.setContentType(MediaType.APPLICATION_JSON);
 
-            HttpEntity<UserRepresentationDTO> entity = new HttpEntity<>(null, headers);
+            HttpEntity<Void> entity = new HttpEntity<>(headers);
 
             String requestUri = adminUri.concat("/users?id=").concat(userId);
             ResponseEntity<List<UserRepresentationDTO>> response = restTemplate.exchange(
@@ -325,7 +329,7 @@ public class UserManagerService implements IUserManagerService {
             headers.setBearerAuth(token);
             headers.setContentType(MediaType.APPLICATION_JSON);
 
-            HttpEntity<UserRepresentationDTO> entity = new HttpEntity<>(null, headers);
+            HttpEntity<Void> entity = new HttpEntity<>(headers);
 
             String requestUri = adminUri.concat("/users/").concat(userId);
             ResponseEntity<List<UserRepresentationDTO>> response = restTemplate.exchange(
@@ -401,7 +405,7 @@ public class UserManagerService implements IUserManagerService {
             headers.setBearerAuth(token);
             headers.setContentType(MediaType.APPLICATION_JSON);
 
-            HttpEntity<Object> entity = new HttpEntity<>(headers);
+            HttpEntity<Void> entity = new HttpEntity<>(headers);
 
             String requestUri = adminUri.concat("/users?email=").concat(email);
             ResponseEntity<List<UserRepresentationDTO>> response = restTemplate.exchange(
@@ -440,7 +444,7 @@ public class UserManagerService implements IUserManagerService {
             headers.setBearerAuth(token);
             headers.setContentType(MediaType.APPLICATION_JSON);
 
-            HttpEntity<Object> entity = new HttpEntity<>(headers);
+            HttpEntity<Void> entity = new HttpEntity<>(headers);
 
             String requestUri = adminUri.concat("/users/").concat(userId);
             ResponseEntity<UserRepresentationDTO> response = restTemplate.exchange(
@@ -549,7 +553,7 @@ public class UserManagerService implements IUserManagerService {
             headers.setBearerAuth(token);
             headers.setContentType(MediaType.APPLICATION_JSON);
 
-            HttpEntity<Object> entity = new HttpEntity<>(null, headers);
+            HttpEntity<Void> entity = new HttpEntity<>(headers);
 
             String requestUri = adminUri.concat("/roles");
             ResponseEntity<List<RoleRepresentationDTO>> response = restTemplate.exchange(
@@ -640,7 +644,7 @@ public class UserManagerService implements IUserManagerService {
                 headers.setBearerAuth(token);
                 headers.setContentType(MediaType.APPLICATION_JSON);
 
-                HttpEntity<Object> entity = new HttpEntity<>(null, headers);
+                HttpEntity<Void> entity = new HttpEntity<>(headers);
 
                 String requestUri = adminUri.concat("/users/").concat(userId).concat("/logout");
                 ResponseEntity<Object> response = restTemplate.exchange(
@@ -663,16 +667,15 @@ public class UserManagerService implements IUserManagerService {
     }
 
     /**
-     * Retrieve all users with a specific role from Keycloak
+     * Retrieve all users with a specific user role from Keycloak
      *
-     * @param realmRole: User Role (Admin, User, Super Admin)
+     * @param userRole: Client Role
      * @param tokenValue: JWT Token value
      * @return List<UserDTO>
      */
     @Override
-    public List<UserDTO> fetchUsersByRole(String realmRole, String tokenValue) {
+    public List<UserDTO> fetchUsersByRole(String userRole, String tokenValue) {
         try {
-            String clientName = clientId;
             String clientID = keycloakSupportService.getClientId();
             if(clientID == null)
                 throw new DataRetrievalException("Unable to locate requested client ID in Keycloak");
@@ -682,9 +685,9 @@ public class UserManagerService implements IUserManagerService {
             headers.setBearerAuth(tokenValue);
             headers.setContentType(MediaType.APPLICATION_JSON);
 
-            HttpEntity<List<UserRepresentationDTO>> entity = new HttpEntity<>(null, headers);
+            HttpEntity<Void> entity = new HttpEntity<>(headers);
 
-            String requestUri = adminUri.concat("/clients/").concat(clientID).concat("/roles/").concat(realmRole).concat("/users");
+            String requestUri = adminUri.concat("/clients/").concat(clientID).concat("/roles/").concat(userRole).concat("/users");
             ResponseEntity<List<UserRepresentationDTO>> response = restTemplate.exchange(
                     requestUri,
                     HttpMethod.GET,
@@ -698,12 +701,55 @@ public class UserManagerService implements IUserManagerService {
 
             return Collections.emptyList();
         } catch (HttpClientErrorException | HttpServerErrorException e) {
-            log.error("HTTP error during logout of user : {}, Response body: {}", e.getMessage(), e.getResponseBodyAsString(), e);
-            throw new KeycloakException("HTTP error during logout of user", e);
+            log.error("HTTP error during retrieval of user per role : {}, Response body: {}", e.getMessage(), e.getResponseBodyAsString(), e);
+            throw new KeycloakException("HTTP error retrieval of user per role", e);
         } catch (RestClientException e) {
-            log.error("Error during logout of user : {}", e.getMessage(), e);
-            throw new KeycloakException("Error during logout of user", e);
+            log.error("Error during retrieval of user per role : {}", e.getMessage(), e);
+            throw new KeycloakException("Error during retrieval of user per role", e);
         }
+    }
+
+    /**
+     * Retrieve all users from a specifi pilot from Keycloak
+     *
+     * @param pilotCode: Pilot Code
+     * @param tokenValue: JWT Token value
+     * @return List<UserDTO>
+     */
+    @Override
+    public List<UserDTO> fetchUsersByPilotCode(String pilotCode, String tokenValue){
+      try {
+        String groupId = keycloakSupportService.retrievePilotCodeID(pilotCode, tokenValue);
+        if (groupId == null)
+          throw new DataRetrievalException("Unable to locate requested group ID in Keycloak");
+
+        // Set Headers
+        HttpHeaders headers = new HttpHeaders();
+        headers.setBearerAuth(tokenValue);
+        headers.setContentType(MediaType.APPLICATION_JSON);
+
+        HttpEntity<Void> entity = new HttpEntity<>(headers);
+
+        String requestUri = adminUri.concat("/groups/").concat(groupId).concat("/members");
+        ResponseEntity<List<UserRepresentationDTO>> response = restTemplate.exchange(
+                requestUri,
+                HttpMethod.GET,
+                entity,
+                new ParameterizedTypeReference<>() {
+                }
+        );
+
+        if (response.getStatusCode().is2xxSuccessful() && response.getBody() != null && !response.getBody().isEmpty())
+            return response.getBody().stream().map(UserRepresentationDTO::toUserDTO).toList();
+
+        return Collections.emptyList();
+      } catch (HttpClientErrorException | HttpServerErrorException e) {
+          log.error("HTTP error retrieval of user per pilot : {}, Response body: {}", e.getMessage(), e.getResponseBodyAsString(), e);
+          throw new KeycloakException("HTTP error during retrieval of user per pilot", e);
+      } catch (RestClientException e) {
+          log.error("Error during retrieval of user per pilot : {}", e.getMessage(), e);
+          throw new KeycloakException("Error during retrieval of user per pilot", e);
+      }
     }
 
     /**
@@ -763,7 +809,7 @@ public class UserManagerService implements IUserManagerService {
             headers.setBearerAuth(token);
             headers.setContentType(MediaType.APPLICATION_JSON);
 
-            HttpEntity<CredentialRepresentationDTO> entity = new HttpEntity<>(null, headers);
+            HttpEntity<Void> entity = new HttpEntity<>(headers);
 
             String requestUri = adminUri.concat("/clients/").concat(clientID).concat("/roles");
             ResponseEntity<List<RoleRepresentationDTO>> response = restTemplate.exchange(
