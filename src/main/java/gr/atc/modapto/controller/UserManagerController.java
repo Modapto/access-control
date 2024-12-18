@@ -4,6 +4,7 @@ import java.util.List;
 import java.util.UUID;
 import java.util.concurrent.CompletableFuture;
 
+import io.swagger.v3.oas.annotations.security.SecurityRequirement;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.security.access.prepost.PreAuthorize;
@@ -55,7 +56,7 @@ public class UserManagerController {
      * @param credentials : Email and password of user
      * @return AuthenticationResponse
      */
-    @Operation(summary = "Authenticate user given credentials")
+    @Operation(summary = "Authenticate user given credentials", security = @SecurityRequirement(name = ""))
     @ApiResponses(value = {
             @ApiResponse(responseCode = "200", description = "Authentication token generated successfully", content = {
                     @Content(mediaType = "application/json", schema = @Schema(implementation = AuthenticationResponseDTO.class))}),
@@ -80,10 +81,10 @@ public class UserManagerController {
     /**
      * POST refresh token to refresh user's token before expiration
      *
-     * @param token : Refresh Token
+     * @param refreshToken : Refresh Token
      * @return AuthenticationResponse
      */
-    @Operation(summary = "Refresh user Token")
+    @Operation(summary = "Refresh user Token", security = @SecurityRequirement(name = ""))
     @ApiResponses(value = {
             @ApiResponse(responseCode = "200", description = "Authentication token generated successfully", content = {
                     @Content(mediaType = "application/json", schema = @Schema(implementation = AuthenticationResponseDTO.class))}),
@@ -112,7 +113,7 @@ public class UserManagerController {
      * @param password : User's new password
      * @return message of success or failure
      */
-    @Operation(summary = "Activate user")
+    @Operation(summary = "Activate user", security = @SecurityRequirement(name = ""))
     @ApiResponses(value = {
             @ApiResponse(responseCode = "200", description = "User activated and password updated successfully."),
             @ApiResponse(responseCode = "400", description = "Invalid token was given as parameter."),
@@ -147,7 +148,7 @@ public class UserManagerController {
      * @param jwt  : JWT Token
      * @return message of success or failure
      */
-    @Operation(summary = "Logout user")
+    @Operation(summary = "Logout user", security = @SecurityRequirement(name = "bearerToken"))
     @ApiResponses(value = {
             @ApiResponse(responseCode = "200", description = "User logged out successfully"),
             @ApiResponse(responseCode = "400", description = "Invalid request: Either credentials or token must be provided!"),
@@ -175,7 +176,7 @@ public class UserManagerController {
      * @param jwt  : JWT Token
      * @return message of success or failure
      */
-    @Operation(summary = "Create a new user in Keycloak")
+    @Operation(summary = "Create a new user in Keycloak", security = @SecurityRequirement(name = "bearerToken"))
     @ApiResponses(value = {
             @ApiResponse(responseCode = "200", description = "User created successfully in Keycloak", content = {
                     @Content(mediaType = "application/json", schema = @Schema(implementation = AuthenticationResponseDTO.class))}),
@@ -245,7 +246,7 @@ public class UserManagerController {
      * @param jwt: JWT Token
      * @return Message of success or failure
      */
-    @Operation(summary = "Update user's information in Keycloak")
+    @Operation(summary = "Update user's information in Keycloak", security = @SecurityRequirement(name = "bearerToken"))
     @ApiResponses(value = {
             @ApiResponse(responseCode = "200", description = "User updated successfully"),
             @ApiResponse(responseCode = "400", description = "Invalid request: Either credentials or token must be provided!"),
@@ -296,7 +297,7 @@ public class UserManagerController {
      * @param jwt: JWT Token
      * @return Message of success or failure
      */
-    @Operation(summary = "Change user's password in Keycloak")
+    @Operation(summary = "Change user's password in Keycloak", security = @SecurityRequirement(name = "bearerToken"))
     @ApiResponses(value = {
             @ApiResponse(responseCode = "200", description = "User's password updated successfully"),
             @ApiResponse(responseCode = "400", description = "Invalid request: Either credentials or token must be provided!"),
@@ -328,7 +329,7 @@ public class UserManagerController {
      * @param jwt: JWT Token
      * @return List<UserDTO>
      */
-    @Operation(summary = "Retrieve all users from Keycloak")
+    @Operation(summary = "Retrieve all users from Keycloak", security = @SecurityRequirement(name = "bearerToken"))
     @ApiResponses(value = {
             @ApiResponse(responseCode = "200", description = "Users retrieved successfully", content = {
                     @Content(mediaType = "application/json", schema = @Schema(implementation = UserDTO.class))}),
@@ -353,7 +354,7 @@ public class UserManagerController {
      * @param jwt: JWT Token
      * @return UserDTO
      */
-    @Operation(summary = "Search user by ID from Keycloak")
+    @Operation(summary = "Search user by ID from Keycloak", security = @SecurityRequirement(name = "bearerToken"))
     @ApiResponses(value = {
             @ApiResponse(responseCode = "200", description = "User retrieved successfully", content = {
                     @Content(mediaType = "application/json", schema = @Schema(implementation = UserDTO.class))}),
@@ -374,7 +375,7 @@ public class UserManagerController {
      * @param jwt: JWT Token
      * @return Message of success or failure
      */
-    @Operation(summary = "Delete a user by ID from Keycloak")
+    @Operation(summary = "Delete a user by ID from Keycloak", security = @SecurityRequirement(name = "bearerToken"))
     @ApiResponses(value = {
             @ApiResponse(responseCode = "200", description = "User deleted successfully", content = {
                     @Content(mediaType = "application/json", schema = @Schema(implementation = UserDTO.class))}),
@@ -400,7 +401,7 @@ public class UserManagerController {
      * @param jwt: JWT Token
      * @return List<UserDTO>
      */
-    @Operation(summary = "Retrieve all user IDs for a specific pilot from Keycloak")
+    @Operation(summary = "Retrieve all user IDs for a specific pilot from Keycloak", security = @SecurityRequirement(name = "bearerToken"))
     @ApiResponses(value = {
       @ApiResponse(responseCode = "200", description = "User IDs retrieved successfully"),
       @ApiResponse(responseCode = "400", description = "Invalid request: Either credentials or token must be provided!"),
@@ -421,7 +422,7 @@ public class UserManagerController {
      * @param userRole : User Role
      * @return List<UserDTO>
      */
-    @Operation(summary = "Retrieve all user IDs per role from Keycloak")
+    @Operation(summary = "Retrieve all user IDs per role from Keycloak", security = @SecurityRequirement(name = "bearerToken"))
     @ApiResponses(value = {
       @ApiResponse(responseCode = "200", description = "User IDs for role retrieved successfully"),
       @ApiResponse(responseCode = "400", description = "Invalid request: Either credentials or token must be provided!"),
@@ -441,7 +442,7 @@ public class UserManagerController {
      * @param authentication : JWT token
      * @return authentication information
      */
-    @Operation(summary = "Retrieve Authentication Information based on the JWT token")
+    @Operation(summary = "Retrieve Authentication Information based on the JWT token", security = @SecurityRequirement(name = "bearerToken"))
     @ApiResponses(value = {
             @ApiResponse(responseCode = "200", description = "Information about Authentication Information based on the JWT token", content = {
                     @Content(mediaType = "application/json", schema = @Schema(implementation = Authentication.class))}),

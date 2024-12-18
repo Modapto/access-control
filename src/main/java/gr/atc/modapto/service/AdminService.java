@@ -18,7 +18,6 @@ import org.springframework.web.client.RestTemplate;
 
 import gr.atc.modapto.dto.UserDTO;
 import gr.atc.modapto.dto.UserRoleDTO;
-import gr.atc.modapto.dto.keycloak.ClientRoleDTO;
 import gr.atc.modapto.dto.keycloak.GroupDTO;
 import gr.atc.modapto.dto.keycloak.RealmRoleDTO;
 import gr.atc.modapto.dto.keycloak.RoleRepresentationDTO;
@@ -138,7 +137,7 @@ public class AdminService implements IAdminService {
      * @return List<String> : User Roles
      */
     @Override
-    public List<String> retrieveAllUserRoles(String token) {
+    public List<UserRoleDTO> retrieveAllUserRoles(String token, String pilot) {
         try {
             // Set Headers
             HttpHeaders headers = new HttpHeaders();
@@ -154,8 +153,8 @@ public class AdminService implements IAdminService {
                 return Collections.emptyList();
             }
 
-            String requestUri = adminUri.concat("/clients/").concat(clientId).concat("/roles");
-            ResponseEntity<List<ClientRoleDTO>> response = restTemplate.exchange(
+            String requestUri = adminUri.concat("/clients/").concat(clientId).concat("/roles?briefRepresentation=false");
+            ResponseEntity<List<RoleRepresentationDTO>> response = restTemplate.exchange(
                     requestUri,
                     HttpMethod.GET,
                     entity,
@@ -164,9 +163,16 @@ public class AdminService implements IAdminService {
 
             // Valid Resposne
             if (response.getStatusCode().is2xxSuccessful() && response.getBody() != null )
-                return response.getBody().stream()
-                        .map(ClientRoleDTO::getName)
-                        .toList();
+                // Return results either filtered by Pilot or return all results
+                if (pilot.equals("ALL")) // Case for SUPER_ADMIN
+                    return response.getBody().stream()
+                            .map(RoleRepresentationDTO::fromRoleRepresentation)
+                            .toList();
+                else // Case for ADMINS
+                    return response.getBody().stream()
+                            .map(RoleRepresentationDTO::fromRoleRepresentation)
+                            .filter(role -> pilot.equals(role.getPilotCode() != null ? role.getPilotCode().toString() : null))
+                            .toList();
 
             // Invalid Response return empty List
             return Collections.emptyList();

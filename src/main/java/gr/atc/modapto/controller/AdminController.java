@@ -3,8 +3,10 @@ package gr.atc.modapto.controller;
 import java.util.List;
 
 import gr.atc.modapto.dto.UserDTO;
+import gr.atc.modapto.service.IAdminService;
 import gr.atc.modapto.validation.ValidPilotCode;
 import gr.atc.modapto.validation.ValidUserRole;
+import io.swagger.v3.oas.annotations.security.SecurityRequirement;
 import org.apache.commons.lang3.StringUtils;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
@@ -22,7 +24,6 @@ import org.springframework.web.bind.annotation.RestController;
 
 import gr.atc.modapto.dto.UserRoleDTO;
 import gr.atc.modapto.enums.PilotRole;
-import gr.atc.modapto.service.AdminService;
 import gr.atc.modapto.util.JwtUtils;
 import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.media.Content;
@@ -42,7 +43,7 @@ public class AdminController {
      * User Role: Specific role a use can have inside an organization
      * Pilot Code: The abbreviation of the Pilot
      */
-    private final AdminService adminService;
+    private final IAdminService adminService;
 
     private static final String INVALID_TOKEN = "Token inserted is invalid. It does not contain any information about the user role or the pilot";
 
@@ -56,7 +57,7 @@ public class AdminController {
      * @param jwt : JWT Token
      * @return List<String> : List of Pilot Roles
      */
-    @Operation(summary = "Retrieve all pilot roles from Keycloak")
+    @Operation(summary = "Retrieve all pilot roles from Keycloak", security = @SecurityRequirement(name = "bearerToken"))
     @ApiResponses(value = {
             @ApiResponse(responseCode = "200", description = "User roles retrieved successfully"),
             @ApiResponse(responseCode = "400", description = "Invalid request: either credentials or token must be provided!"),
@@ -84,7 +85,7 @@ public class AdminController {
      * @param jwt : JWT Token
      * @return Success message or Failure Message
      */
-    @Operation(summary = "Create a new User Role")
+    @Operation(summary = "Create a new User Role", security = @SecurityRequirement(name = "bearerToken"))
     @ApiResponses(value = {
             @ApiResponse(responseCode = "201", description = "User role created successfully"),
             @ApiResponse(responseCode = "400", description = "Invalid request: either credentials or token must be provided!"),
@@ -129,7 +130,7 @@ public class AdminController {
      * @param roleName : Name of the Role
      * @return Success message or Failure Message
      */
-    @Operation(summary = "Delete a User Role")
+    @Operation(summary = "Delete a User Role", security = @SecurityRequirement(name = "bearerToken"))
     @ApiResponses(value = {
             @ApiResponse(responseCode = "200", description = "User role deleted successfully"),
             @ApiResponse(responseCode = "400", description = "Invalid request: either credentials or token must be provided!"),
@@ -172,7 +173,7 @@ public class AdminController {
      * @param roleName : Name of the Role
      * @return UserRoleDTO
      */
-    @Operation(summary = "Retrieve a User Role")
+    @Operation(summary = "Retrieve a User Role", security = @SecurityRequirement(name = "bearerToken"))
     @ApiResponses(value = {
             @ApiResponse(responseCode = "200", description = "User role retrieved successfully", content = @Content(schema = @Schema(implementation = UserRoleDTO.class))),
             @ApiResponse(responseCode = "400", description = "Invalid request: either credentials or token must be provided!"),
@@ -194,7 +195,7 @@ public class AdminController {
      * @param roleName : Name of the Role
      * @return Success message or Failure Message
      */
-    @Operation(summary = "Update a User Role")
+    @Operation(summary = "Update a User Role", security = @SecurityRequirement(name = "bearerToken"))
     @ApiResponses(value = {
             @ApiResponse(responseCode = "200", description = "User role updated successfully"),
             @ApiResponse(responseCode = "400", description = "Invalid request: either credentials or token must be provided!"),
@@ -242,7 +243,7 @@ public class AdminController {
      * @param jwt : JWT Token
      * @return List<String> : List of Pilots
      */
-    @Operation(summary = "Retrieve all pilots from Keycloak")
+    @Operation(summary = "Retrieve all pilots from Keycloak", security = @SecurityRequirement(name = "bearerToken"))
     @ApiResponses(value = {
             @ApiResponse(responseCode = "200", description = "Pilot codes retrieved successfully"),
             @ApiResponse(responseCode = "400", description = "Invalid request: either credentials or token must be provided!"),
@@ -256,22 +257,61 @@ public class AdminController {
     }
 
     /**
-     * GET all Keycloak User Roles
+     * GET all Keycloak User Role Names
      *
      * @param jwt : JWT Token
-     * @return List<String> : List of User Roles
+     * @return List<String> : List of User Role Names
      */
-    @Operation(summary = "Retrieve all user roles from Keycloak")
+    @Operation(summary = "Retrieve all user role names from Keycloak", security = @SecurityRequirement(name = "bearerToken"))
     @ApiResponses(value = {
             @ApiResponse(responseCode = "200", description = "User roles retrieved successfully"),
             @ApiResponse(responseCode = "400", description = "Invalid request: either credentials or token must be provided!"),
             @ApiResponse(responseCode = "401", description = "Authentication process failed!"),
+            @ApiResponse(responseCode = "403", description = "Token inserted is invalid. It does not contain any information about the user role or the pilot"),
             @ApiResponse(responseCode = "403", description = "Invalid authorization parameters. Check JWT or CSRF Token")
     })
-    @PreAuthorize("hasAuthority('ROLE_SUPER_ADMIN')")
+    @PreAuthorize("hasAnyAuthority('ROLE_SUPER_ADMIN', 'ROLE_ADMIN')")
+    @GetMapping("/roles/names")
+    public ResponseEntity<BaseResponse<List<String>>> getAllUserRoleNames(@AuthenticationPrincipal Jwt jwt) {
+        // Validate token proper format
+        String role = JwtUtils.extractPilotRole(jwt);
+        String pilot = JwtUtils.extractPilotCode(jwt);
+
+        // Check if JWT contains the proper information
+        if (StringUtils.isAnyBlank(role, pilot))
+            return new ResponseEntity<>(BaseResponse.error(INVALID_TOKEN), HttpStatus.FORBIDDEN);
+
+        // Create the list of String for the names of user roles
+        List<String> userRoleNames = adminService.retrieveAllUserRoles(jwt.getTokenValue(), pilot.toUpperCase()).stream().map(UserRoleDTO::getName).toList();
+        return new ResponseEntity<>(BaseResponse.success(userRoleNames, "User role names retrieved successfully"), HttpStatus.OK);
+    }
+
+    /**
+     * GET all Keycloak User Roles
+     *
+     * @param jwt : JWT Token
+     * @return List<UserRoleDTO> : List of User Roles
+     */
+    @Operation(summary = "Retrieve all user roles from Keycloak", security = @SecurityRequirement(name = "bearerToken"))
+    @ApiResponses(value = {
+            @ApiResponse(responseCode = "200", description = "User roles retrieved successfully"),
+            @ApiResponse(responseCode = "400", description = "Invalid request: either credentials or token must be provided!"),
+            @ApiResponse(responseCode = "401", description = "Authentication process failed!"),
+            @ApiResponse(responseCode = "403", description = "Token inserted is invalid. It does not contain any information about the user role or the pilot"),
+            @ApiResponse(responseCode = "403", description = "Invalid authorization parameters. Check JWT or CSRF Token")
+    })
+    @PreAuthorize("hasAnyAuthority('ROLE_SUPER_ADMIN', 'ROLE_ADMIN')")
     @GetMapping("/roles")
-    public ResponseEntity<BaseResponse<List<String>>> getAllUserRoles(@AuthenticationPrincipal Jwt jwt) {
-        return new ResponseEntity<>(BaseResponse.success(adminService.retrieveAllUserRoles(jwt.getTokenValue()), "User roles retrieved successfully"), HttpStatus.OK);
+    public ResponseEntity<BaseResponse<List<UserRoleDTO>>> getAllUserRoles(@AuthenticationPrincipal Jwt jwt) {
+        // Validate token proper format
+        String role = JwtUtils.extractPilotRole(jwt);
+        String pilot = JwtUtils.extractPilotCode(jwt);
+
+        // Check if JWT contains the proper information
+        if (StringUtils.isAnyBlank(role, pilot))
+            return new ResponseEntity<>(BaseResponse.error(INVALID_TOKEN), HttpStatus.FORBIDDEN);
+
+        return new ResponseEntity<>(BaseResponse.success(adminService.retrieveAllUserRoles(jwt.getTokenValue(), pilot.toUpperCase()), "User roles retrieved successfully"), HttpStatus.OK);
     }
 
     /**
@@ -281,7 +321,7 @@ public class AdminController {
      * @param pilotCode : Pilot Code
      * @return List<String> : List of User Roles
      */
-    @Operation(summary = "Retrieve all user roles from Keycloak filtered by Pilot Code")
+    @Operation(summary = "Retrieve all user roles from Keycloak filtered by Pilot Code", security = @SecurityRequirement(name = "bearerToken"))
     @ApiResponses(value = {
             @ApiResponse(responseCode = "200", description = "User roles retrieved successfully"),
             @ApiResponse(responseCode = "400", description = "Invalid request: either credentials or token must be provided!"),
@@ -319,7 +359,7 @@ public class AdminController {
      * @param userRole : User Role
      * @return List<String> : List of User Roles
      */
-    @Operation(summary = "Retrieve all users associated with a specific user role")
+    @Operation(summary = "Retrieve all users associated with a specific user role", security = @SecurityRequirement(name = "bearerToken"))
     @ApiResponses(value = {
             @ApiResponse(responseCode = "200", description = "Users associated with the role retrieved successfully"),
             @ApiResponse(responseCode = "400", description = "Invalid request: either credentials or token must be provided!"),

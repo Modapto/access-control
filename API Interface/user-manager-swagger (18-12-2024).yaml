@@ -7,7 +7,7 @@
   },
   "servers": [
     {
-      "url": "http://localhost:8094",
+      "url": "http://services.modapto.atc.gr",
       "description": "Generated server url"
     }
   ],
@@ -45,7 +45,7 @@
             "content": {
               "*/*": {
                 "schema": {
-                  "$ref": "#/components/schemas/ApiResponseInfoString"
+                  "$ref": "#/components/schemas/BaseResponseString"
                 }
               }
             }
@@ -55,7 +55,24 @@
             "content": {
               "*/*": {
                 "schema": {
-                  "$ref": "#/components/schemas/ApiResponseInfoString"
+                  "oneOf": [
+                    {
+                      "$ref": "#/components/schemas/BaseResponseString"
+                    },
+                    {
+                      "$ref": "#/components/schemas/BaseResponseMapStringString"
+                    }
+                  ]
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Unauthorized",
+            "content": {
+              "*/*": {
+                "schema": {
+                  "$ref": "#/components/schemas/BaseResponseMapStringString"
                 }
               }
             }
@@ -65,7 +82,7 @@
             "content": {
               "*/*": {
                 "schema": {
-                  "$ref": "#/components/schemas/ApiResponseInfoMapStringString"
+                  "$ref": "#/components/schemas/BaseResponseMapStringString"
                 }
               }
             }
@@ -75,7 +92,7 @@
             "content": {
               "*/*": {
                 "schema": {
-                  "$ref": "#/components/schemas/ApiResponseInfoString"
+                  "$ref": "#/components/schemas/BaseResponseString"
                 }
               }
             }
@@ -85,12 +102,17 @@
             "content": {
               "*/*": {
                 "schema": {
-                  "$ref": "#/components/schemas/ApiResponseInfoString"
+                  "$ref": "#/components/schemas/BaseResponseString"
                 }
               }
             }
           }
-        }
+        },
+        "security": [
+          {
+            "bearerToken": []
+          }
+        ]
       }
     },
     "/api/users/change-password": {
@@ -116,7 +138,7 @@
             "content": {
               "*/*": {
                 "schema": {
-                  "$ref": "#/components/schemas/ApiResponseInfoString"
+                  "$ref": "#/components/schemas/BaseResponseString"
                 }
               }
             }
@@ -126,7 +148,24 @@
             "content": {
               "*/*": {
                 "schema": {
-                  "$ref": "#/components/schemas/ApiResponseInfoString"
+                  "oneOf": [
+                    {
+                      "$ref": "#/components/schemas/BaseResponseString"
+                    },
+                    {
+                      "$ref": "#/components/schemas/BaseResponseMapStringString"
+                    }
+                  ]
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Unauthorized",
+            "content": {
+              "*/*": {
+                "schema": {
+                  "$ref": "#/components/schemas/BaseResponseMapStringString"
                 }
               }
             }
@@ -136,7 +175,7 @@
             "content": {
               "*/*": {
                 "schema": {
-                  "$ref": "#/components/schemas/ApiResponseInfoMapStringString"
+                  "$ref": "#/components/schemas/BaseResponseMapStringString"
                 }
               }
             }
@@ -146,7 +185,7 @@
             "content": {
               "*/*": {
                 "schema": {
-                  "$ref": "#/components/schemas/ApiResponseInfoString"
+                  "$ref": "#/components/schemas/BaseResponseString"
                 }
               }
             }
@@ -156,12 +195,17 @@
             "content": {
               "*/*": {
                 "schema": {
-                  "$ref": "#/components/schemas/ApiResponseInfoString"
+                  "$ref": "#/components/schemas/BaseResponseString"
                 }
               }
             }
           }
-        }
+        },
+        "security": [
+          {
+            "bearerToken": []
+          }
+        ]
       }
     },
     "/api/admin/roles/{roleName}": {
@@ -197,7 +241,14 @@
             "content": {
               "*/*": {
                 "schema": {
-                  "$ref": "#/components/schemas/ApiResponseInfoUserRoleDTO"
+                  "oneOf": [
+                    {
+                      "$ref": "#/components/schemas/BaseResponseString"
+                    },
+                    {
+                      "$ref": "#/components/schemas/BaseResponseMapStringString"
+                    }
+                  ]
                 }
               }
             }
@@ -207,7 +258,7 @@
             "content": {
               "*/*": {
                 "schema": {
-                  "$ref": "#/components/schemas/ApiResponseInfoUserRoleDTO"
+                  "$ref": "#/components/schemas/BaseResponseMapStringString"
                 }
               }
             }
@@ -217,7 +268,7 @@
             "content": {
               "*/*": {
                 "schema": {
-                  "$ref": "#/components/schemas/ApiResponseInfoMapStringString"
+                  "$ref": "#/components/schemas/BaseResponseMapStringString"
                 }
               }
             }
@@ -227,7 +278,7 @@
             "content": {
               "*/*": {
                 "schema": {
-                  "$ref": "#/components/schemas/ApiResponseInfoString"
+                  "$ref": "#/components/schemas/BaseResponseString"
                 }
               }
             }
@@ -237,12 +288,17 @@
             "content": {
               "*/*": {
                 "schema": {
-                  "$ref": "#/components/schemas/ApiResponseInfoString"
+                  "$ref": "#/components/schemas/BaseResponseString"
                 }
               }
             }
           }
-        }
+        },
+        "security": [
+          {
+            "bearerToken": []
+          }
+        ]
       },
       "put": {
         "tags": [
@@ -276,7 +332,7 @@
             "content": {
               "*/*": {
                 "schema": {
-                  "$ref": "#/components/schemas/ApiResponseInfoVoid"
+                  "$ref": "#/components/schemas/BaseResponseVoid"
                 }
               }
             }
@@ -286,7 +342,14 @@
             "content": {
               "*/*": {
                 "schema": {
-                  "$ref": "#/components/schemas/ApiResponseInfoVoid"
+                  "oneOf": [
+                    {
+                      "$ref": "#/components/schemas/BaseResponseString"
+                    },
+                    {
+                      "$ref": "#/components/schemas/BaseResponseMapStringString"
+                    }
+                  ]
                 }
               }
             }
@@ -296,17 +359,17 @@
             "content": {
               "*/*": {
                 "schema": {
-                  "$ref": "#/components/schemas/ApiResponseInfoVoid"
+                  "$ref": "#/components/schemas/BaseResponseMapStringString"
                 }
               }
             }
           },
           "403": {
-            "description": "Invalid authorization parameters. Check JWT or CSRF Token",
+            "description": "User of role 'SUPER_ADMIN' can only convert a pilot role into 'SUPER_ADMIN'",
             "content": {
               "*/*": {
                 "schema": {
-                  "$ref": "#/components/schemas/ApiResponseInfoMapStringString"
+                  "$ref": "#/components/schemas/BaseResponseMapStringString"
                 }
               }
             }
@@ -316,7 +379,7 @@
             "content": {
               "*/*": {
                 "schema": {
-                  "$ref": "#/components/schemas/ApiResponseInfoString"
+                  "$ref": "#/components/schemas/BaseResponseString"
                 }
               }
             }
@@ -326,12 +389,17 @@
             "content": {
               "*/*": {
                 "schema": {
-                  "$ref": "#/components/schemas/ApiResponseInfoString"
+                  "$ref": "#/components/schemas/BaseResponseString"
                 }
               }
             }
           }
-        }
+        },
+        "security": [
+          {
+            "bearerToken": []
+          }
+        ]
       },
       "delete": {
         "tags": [
@@ -355,7 +423,7 @@
             "content": {
               "*/*": {
                 "schema": {
-                  "$ref": "#/components/schemas/ApiResponseInfoVoid"
+                  "$ref": "#/components/schemas/BaseResponseVoid"
                 }
               }
             }
@@ -365,7 +433,14 @@
             "content": {
               "*/*": {
                 "schema": {
-                  "$ref": "#/components/schemas/ApiResponseInfoVoid"
+                  "oneOf": [
+                    {
+                      "$ref": "#/components/schemas/BaseResponseString"
+                    },
+                    {
+                      "$ref": "#/components/schemas/BaseResponseMapStringString"
+                    }
+                  ]
                 }
               }
             }
@@ -375,7 +450,7 @@
             "content": {
               "*/*": {
                 "schema": {
-                  "$ref": "#/components/schemas/ApiResponseInfoVoid"
+                  "$ref": "#/components/schemas/BaseResponseMapStringString"
                 }
               }
             }
@@ -385,7 +460,7 @@
             "content": {
               "*/*": {
                 "schema": {
-                  "$ref": "#/components/schemas/ApiResponseInfoMapStringString"
+                  "$ref": "#/components/schemas/BaseResponseMapStringString"
                 }
               }
             }
@@ -395,7 +470,7 @@
             "content": {
               "*/*": {
                 "schema": {
-                  "$ref": "#/components/schemas/ApiResponseInfoString"
+                  "$ref": "#/components/schemas/BaseResponseString"
                 }
               }
             }
@@ -405,12 +480,17 @@
             "content": {
               "*/*": {
                 "schema": {
-                  "$ref": "#/components/schemas/ApiResponseInfoString"
+                  "$ref": "#/components/schemas/BaseResponseString"
                 }
               }
             }
           }
-        }
+        },
+        "security": [
+          {
+            "bearerToken": []
+          }
+        ]
       }
     },
     "/api/users/refresh-token": {
@@ -418,27 +498,18 @@
         "tags": [
           "user-manager-controller"
         ],
-        "summary": "Authenticate user given credentials or refresh token",
-        "operationId": "authenticateOrRefreshToken",
+        "summary": "Refresh user Token",
+        "operationId": "refreshToken",
         "parameters": [
           {
             "name": "token",
             "in": "query",
-            "required": false,
+            "required": true,
             "schema": {
               "type": "string"
             }
           }
         ],
-        "requestBody": {
-          "content": {
-            "application/json": {
-              "schema": {
-                "$ref": "#/components/schemas/CredentialsDTO"
-              }
-            }
-          }
-        },
         "responses": {
           "200": {
             "description": "Authentication token generated successfully",
@@ -451,11 +522,18 @@
             }
           },
           "400": {
-            "description": "Validation failed",
+            "description": "Invalid / No input was given for requested resource",
             "content": {
               "*/*": {
                 "schema": {
-                  "$ref": "#/components/schemas/ApiResponseInfoAuthenticationResponseDTO"
+                  "oneOf": [
+                    {
+                      "$ref": "#/components/schemas/BaseResponseString"
+                    },
+                    {
+                      "$ref": "#/components/schemas/BaseResponseMapStringString"
+                    }
+                  ]
                 }
               }
             }
@@ -465,7 +543,7 @@
             "content": {
               "*/*": {
                 "schema": {
-                  "$ref": "#/components/schemas/ApiResponseInfoAuthenticationResponseDTO"
+                  "$ref": "#/components/schemas/BaseResponseMapStringString"
                 }
               }
             }
@@ -475,7 +553,7 @@
             "content": {
               "*/*": {
                 "schema": {
-                  "$ref": "#/components/schemas/ApiResponseInfoMapStringString"
+                  "$ref": "#/components/schemas/BaseResponseMapStringString"
                 }
               }
             }
@@ -485,7 +563,7 @@
             "content": {
               "*/*": {
                 "schema": {
-                  "$ref": "#/components/schemas/ApiResponseInfoString"
+                  "$ref": "#/components/schemas/BaseResponseString"
                 }
               }
             }
@@ -495,97 +573,7 @@
             "content": {
               "*/*": {
                 "schema": {
-                  "$ref": "#/components/schemas/ApiResponseInfoString"
-                }
-              }
-            }
-          }
-        }
-      }
-    },
-    "/api/users/authenticate": {
-      "post": {
-        "tags": [
-          "user-manager-controller"
-        ],
-        "summary": "Authenticate user given credentials or refresh token",
-        "operationId": "authenticateOrRefreshToken_1",
-        "parameters": [
-          {
-            "name": "token",
-            "in": "query",
-            "required": false,
-            "schema": {
-              "type": "string"
-            }
-          }
-        ],
-        "requestBody": {
-          "content": {
-            "application/json": {
-              "schema": {
-                "$ref": "#/components/schemas/CredentialsDTO"
-              }
-            }
-          }
-        },
-        "responses": {
-          "200": {
-            "description": "Authentication token generated successfully",
-            "content": {
-              "application/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/AuthenticationResponseDTO"
-                }
-              }
-            }
-          },
-          "400": {
-            "description": "Validation failed",
-            "content": {
-              "*/*": {
-                "schema": {
-                  "$ref": "#/components/schemas/ApiResponseInfoAuthenticationResponseDTO"
-                }
-              }
-            }
-          },
-          "401": {
-            "description": "Authentication process failed",
-            "content": {
-              "*/*": {
-                "schema": {
-                  "$ref": "#/components/schemas/ApiResponseInfoAuthenticationResponseDTO"
-                }
-              }
-            }
-          },
-          "403": {
-            "description": "Forbidden",
-            "content": {
-              "*/*": {
-                "schema": {
-                  "$ref": "#/components/schemas/ApiResponseInfoMapStringString"
-                }
-              }
-            }
-          },
-          "404": {
-            "description": "Not Found",
-            "content": {
-              "*/*": {
-                "schema": {
-                  "$ref": "#/components/schemas/ApiResponseInfoString"
-                }
-              }
-            }
-          },
-          "500": {
-            "description": "Internal Server Error",
-            "content": {
-              "*/*": {
-                "schema": {
-                  "$ref": "#/components/schemas/ApiResponseInfoString"
+                  "$ref": "#/components/schemas/BaseResponseString"
                 }
               }
             }
@@ -606,7 +594,7 @@
             "content": {
               "*/*": {
                 "schema": {
-                  "$ref": "#/components/schemas/ApiResponseInfoString"
+                  "$ref": "#/components/schemas/BaseResponseString"
                 }
               }
             }
@@ -616,7 +604,14 @@
             "content": {
               "*/*": {
                 "schema": {
-                  "$ref": "#/components/schemas/ApiResponseInfoString"
+                  "oneOf": [
+                    {
+                      "$ref": "#/components/schemas/BaseResponseString"
+                    },
+                    {
+                      "$ref": "#/components/schemas/BaseResponseMapStringString"
+                    }
+                  ]
                 }
               }
             }
@@ -626,7 +621,7 @@
             "content": {
               "*/*": {
                 "schema": {
-                  "$ref": "#/components/schemas/ApiResponseInfoString"
+                  "$ref": "#/components/schemas/BaseResponseMapStringString"
                 }
               }
             }
@@ -636,7 +631,7 @@
             "content": {
               "*/*": {
                 "schema": {
-                  "$ref": "#/components/schemas/ApiResponseInfoMapStringString"
+                  "$ref": "#/components/schemas/BaseResponseMapStringString"
                 }
               }
             }
@@ -646,7 +641,7 @@
             "content": {
               "*/*": {
                 "schema": {
-                  "$ref": "#/components/schemas/ApiResponseInfoString"
+                  "$ref": "#/components/schemas/BaseResponseString"
                 }
               }
             }
@@ -656,12 +651,17 @@
             "content": {
               "*/*": {
                 "schema": {
-                  "$ref": "#/components/schemas/ApiResponseInfoString"
+                  "$ref": "#/components/schemas/BaseResponseString"
                 }
               }
             }
           }
-        }
+        },
+        "security": [
+          {
+            "bearerToken": []
+          }
+        ]
       }
     },
     "/api/users/create": {
@@ -697,7 +697,14 @@
             "content": {
               "*/*": {
                 "schema": {
-                  "$ref": "#/components/schemas/ApiResponseInfoString"
+                  "oneOf": [
+                    {
+                      "$ref": "#/components/schemas/BaseResponseString"
+                    },
+                    {
+                      "$ref": "#/components/schemas/BaseResponseMapStringString"
+                    }
+                  ]
                 }
               }
             }
@@ -707,7 +714,7 @@
             "content": {
               "*/*": {
                 "schema": {
-                  "$ref": "#/components/schemas/ApiResponseInfoString"
+                  "$ref": "#/components/schemas/BaseResponseMapStringString"
                 }
               }
             }
@@ -717,7 +724,7 @@
             "content": {
               "*/*": {
                 "schema": {
-                  "$ref": "#/components/schemas/ApiResponseInfoMapStringString"
+                  "$ref": "#/components/schemas/BaseResponseMapStringString"
                 }
               }
             }
@@ -727,7 +734,7 @@
             "content": {
               "*/*": {
                 "schema": {
-                  "$ref": "#/components/schemas/ApiResponseInfoString"
+                  "$ref": "#/components/schemas/BaseResponseString"
                 }
               }
             }
@@ -737,7 +744,7 @@
             "content": {
               "*/*": {
                 "schema": {
-                  "$ref": "#/components/schemas/ApiResponseInfoString"
+                  "$ref": "#/components/schemas/BaseResponseString"
                 }
               }
             }
@@ -747,7 +754,100 @@
             "content": {
               "*/*": {
                 "schema": {
-                  "$ref": "#/components/schemas/ApiResponseInfoString"
+                  "$ref": "#/components/schemas/BaseResponseString"
+                }
+              }
+            }
+          }
+        },
+        "security": [
+          {
+            "bearerToken": []
+          }
+        ]
+      }
+    },
+    "/api/users/authenticate": {
+      "post": {
+        "tags": [
+          "user-manager-controller"
+        ],
+        "summary": "Authenticate user given credentials",
+        "operationId": "authenticateUser",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/CredentialsDTO"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "description": "Authentication token generated successfully",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/AuthenticationResponseDTO"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Validation failed",
+            "content": {
+              "*/*": {
+                "schema": {
+                  "oneOf": [
+                    {
+                      "$ref": "#/components/schemas/BaseResponseString"
+                    },
+                    {
+                      "$ref": "#/components/schemas/BaseResponseMapStringString"
+                    }
+                  ]
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Authentication process failed",
+            "content": {
+              "*/*": {
+                "schema": {
+                  "$ref": "#/components/schemas/BaseResponseMapStringString"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "Forbidden",
+            "content": {
+              "*/*": {
+                "schema": {
+                  "$ref": "#/components/schemas/BaseResponseMapStringString"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "Not Found",
+            "content": {
+              "*/*": {
+                "schema": {
+                  "$ref": "#/components/schemas/BaseResponseString"
+                }
+              }
+            }
+          },
+          "500": {
+            "description": "Internal Server Error",
+            "content": {
+              "*/*": {
+                "schema": {
+                  "$ref": "#/components/schemas/BaseResponseString"
                 }
               }
             }
@@ -788,7 +888,7 @@
             "content": {
               "*/*": {
                 "schema": {
-                  "$ref": "#/components/schemas/ApiResponseInfoString"
+                  "$ref": "#/components/schemas/BaseResponseString"
                 }
               }
             }
@@ -798,7 +898,24 @@
             "content": {
               "*/*": {
                 "schema": {
-                  "$ref": "#/components/schemas/ApiResponseInfoString"
+                  "oneOf": [
+                    {
+                      "$ref": "#/components/schemas/BaseResponseString"
+                    },
+                    {
+                      "$ref": "#/components/schemas/BaseResponseMapStringString"
+                    }
+                  ]
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Unauthorized",
+            "content": {
+              "*/*": {
+                "schema": {
+                  "$ref": "#/components/schemas/BaseResponseMapStringString"
                 }
               }
             }
@@ -808,7 +925,7 @@
             "content": {
               "*/*": {
                 "schema": {
-                  "$ref": "#/components/schemas/ApiResponseInfoMapStringString"
+                  "$ref": "#/components/schemas/BaseResponseMapStringString"
                 }
               }
             }
@@ -818,7 +935,7 @@
             "content": {
               "*/*": {
                 "schema": {
-                  "$ref": "#/components/schemas/ApiResponseInfoString"
+                  "$ref": "#/components/schemas/BaseResponseString"
                 }
               }
             }
@@ -828,7 +945,7 @@
             "content": {
               "*/*": {
                 "schema": {
-                  "$ref": "#/components/schemas/ApiResponseInfoString"
+                  "$ref": "#/components/schemas/BaseResponseString"
                 }
               }
             }
@@ -859,7 +976,7 @@
             "content": {
               "*/*": {
                 "schema": {
-                  "$ref": "#/components/schemas/ApiResponseInfoVoid"
+                  "$ref": "#/components/schemas/BaseResponseVoid"
                 }
               }
             }
@@ -869,7 +986,14 @@
             "content": {
               "*/*": {
                 "schema": {
-                  "$ref": "#/components/schemas/ApiResponseInfoVoid"
+                  "oneOf": [
+                    {
+                      "$ref": "#/components/schemas/BaseResponseString"
+                    },
+                    {
+                      "$ref": "#/components/schemas/BaseResponseMapStringString"
+                    }
+                  ]
                 }
               }
             }
@@ -879,7 +1003,7 @@
             "content": {
               "*/*": {
                 "schema": {
-                  "$ref": "#/components/schemas/ApiResponseInfoVoid"
+                  "$ref": "#/components/schemas/BaseResponseMapStringString"
                 }
               }
             }
@@ -889,7 +1013,7 @@
             "content": {
               "*/*": {
                 "schema": {
-                  "$ref": "#/components/schemas/ApiResponseInfoMapStringString"
+                  "$ref": "#/components/schemas/BaseResponseMapStringString"
                 }
               }
             }
@@ -899,7 +1023,7 @@
             "content": {
               "*/*": {
                 "schema": {
-                  "$ref": "#/components/schemas/ApiResponseInfoString"
+                  "$ref": "#/components/schemas/BaseResponseString"
                 }
               }
             }
@@ -909,12 +1033,17 @@
             "content": {
               "*/*": {
                 "schema": {
-                  "$ref": "#/components/schemas/ApiResponseInfoString"
+                  "$ref": "#/components/schemas/BaseResponseString"
                 }
               }
             }
           }
-        }
+        },
+        "security": [
+          {
+            "bearerToken": []
+          }
+        ]
       }
     },
     "/api/users": {
@@ -940,7 +1069,24 @@
             "content": {
               "*/*": {
                 "schema": {
-                  "$ref": "#/components/schemas/ApiResponseInfoListUserDTO"
+                  "oneOf": [
+                    {
+                      "$ref": "#/components/schemas/BaseResponseString"
+                    },
+                    {
+                      "$ref": "#/components/schemas/BaseResponseMapStringString"
+                    }
+                  ]
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Unauthorized",
+            "content": {
+              "*/*": {
+                "schema": {
+                  "$ref": "#/components/schemas/BaseResponseMapStringString"
                 }
               }
             }
@@ -950,7 +1096,7 @@
             "content": {
               "*/*": {
                 "schema": {
-                  "$ref": "#/components/schemas/ApiResponseInfoMapStringString"
+                  "$ref": "#/components/schemas/BaseResponseMapStringString"
                 }
               }
             }
@@ -960,7 +1106,7 @@
             "content": {
               "*/*": {
                 "schema": {
-                  "$ref": "#/components/schemas/ApiResponseInfoString"
+                  "$ref": "#/components/schemas/BaseResponseString"
                 }
               }
             }
@@ -970,12 +1116,17 @@
             "content": {
               "*/*": {
                 "schema": {
-                  "$ref": "#/components/schemas/ApiResponseInfoString"
+                  "$ref": "#/components/schemas/BaseResponseString"
                 }
               }
             }
           }
-        }
+        },
+        "security": [
+          {
+            "bearerToken": []
+          }
+        ]
       }
     },
     "/api/users/search": {
@@ -1011,7 +1162,24 @@
             "content": {
               "*/*": {
                 "schema": {
-                  "$ref": "#/components/schemas/ApiResponseInfoUserDTO"
+                  "oneOf": [
+                    {
+                      "$ref": "#/components/schemas/BaseResponseString"
+                    },
+                    {
+                      "$ref": "#/components/schemas/BaseResponseMapStringString"
+                    }
+                  ]
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Unauthorized",
+            "content": {
+              "*/*": {
+                "schema": {
+                  "$ref": "#/components/schemas/BaseResponseMapStringString"
                 }
               }
             }
@@ -1021,7 +1189,7 @@
             "content": {
               "*/*": {
                 "schema": {
-                  "$ref": "#/components/schemas/ApiResponseInfoMapStringString"
+                  "$ref": "#/components/schemas/BaseResponseMapStringString"
                 }
               }
             }
@@ -1031,7 +1199,7 @@
             "content": {
               "*/*": {
                 "schema": {
-                  "$ref": "#/components/schemas/ApiResponseInfoString"
+                  "$ref": "#/components/schemas/BaseResponseString"
                 }
               }
             }
@@ -1041,85 +1209,29 @@
             "content": {
               "*/*": {
                 "schema": {
-                  "$ref": "#/components/schemas/ApiResponseInfoString"
+                  "$ref": "#/components/schemas/BaseResponseString"
                 }
               }
             }
           }
-        }
-      }
-    },
-    "/api/users/ids": {
-      "get": {
-        "tags": [
-          "user-manager-controller"
-        ],
-        "summary": "Retrieve all user IDs from Keycloak",
-        "operationId": "getAllUserIds",
-        "responses": {
-          "200": {
-            "description": "User IDs retrieved successfully",
-            "content": {
-              "*/*": {
-                "schema": {
-                  "$ref": "#/components/schemas/ApiResponseInfoListString"
-                }
-              }
-            }
-          },
-          "400": {
-            "description": "An unexpected error occured",
-            "content": {
-              "*/*": {
-                "schema": {
-                  "$ref": "#/components/schemas/ApiResponseInfoListString"
-                }
-              }
-            }
-          },
-          "403": {
-            "description": "Invalid authorization parameters. Check JWT or CSRF Token",
-            "content": {
-              "*/*": {
-                "schema": {
-                  "$ref": "#/components/schemas/ApiResponseInfoMapStringString"
-                }
-              }
-            }
-          },
-          "404": {
-            "description": "Not Found",
-            "content": {
-              "*/*": {
-                "schema": {
-                  "$ref": "#/components/schemas/ApiResponseInfoString"
-                }
-              }
-            }
-          },
-          "500": {
-            "description": "Internal Server Error",
-            "content": {
-              "*/*": {
-                "schema": {
-                  "$ref": "#/components/schemas/ApiResponseInfoString"
-                }
-              }
-            }
+        },
+        "security": [
+          {
+            "bearerToken": []
           }
-        }
+        ]
       }
     },
-    "/api/users/ids/role/{realmRole}": {
+    "/api/users/ids/role/{userRole}": {
       "get": {
         "tags": [
           "user-manager-controller"
         ],
-        "summary": "Retrieve all user IDs from Keycloak",
+        "summary": "Retrieve all user IDs per role from Keycloak",
         "operationId": "getAllUserIdsByUserRole",
         "parameters": [
           {
-            "name": "realmRole",
+            "name": "userRole",
             "in": "path",
             "required": true,
             "schema": {
@@ -1133,7 +1245,7 @@
             "content": {
               "*/*": {
                 "schema": {
-                  "$ref": "#/components/schemas/ApiResponseInfoListString"
+                  "$ref": "#/components/schemas/BaseResponseListString"
                 }
               }
             }
@@ -1143,7 +1255,24 @@
             "content": {
               "*/*": {
                 "schema": {
-                  "$ref": "#/components/schemas/ApiResponseInfoListString"
+                  "oneOf": [
+                    {
+                      "$ref": "#/components/schemas/BaseResponseString"
+                    },
+                    {
+                      "$ref": "#/components/schemas/BaseResponseMapStringString"
+                    }
+                  ]
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Unauthorized",
+            "content": {
+              "*/*": {
+                "schema": {
+                  "$ref": "#/components/schemas/BaseResponseMapStringString"
                 }
               }
             }
@@ -1153,7 +1282,7 @@
             "content": {
               "*/*": {
                 "schema": {
-                  "$ref": "#/components/schemas/ApiResponseInfoMapStringString"
+                  "$ref": "#/components/schemas/BaseResponseMapStringString"
                 }
               }
             }
@@ -1163,7 +1292,7 @@
             "content": {
               "*/*": {
                 "schema": {
-                  "$ref": "#/components/schemas/ApiResponseInfoString"
+                  "$ref": "#/components/schemas/BaseResponseString"
                 }
               }
             }
@@ -1173,12 +1302,110 @@
             "content": {
               "*/*": {
                 "schema": {
-                  "$ref": "#/components/schemas/ApiResponseInfoString"
+                  "$ref": "#/components/schemas/BaseResponseString"
                 }
               }
             }
           }
-        }
+        },
+        "security": [
+          {
+            "bearerToken": []
+          }
+        ]
+      }
+    },
+    "/api/users/ids/pilot/{pilotCode}": {
+      "get": {
+        "tags": [
+          "user-manager-controller"
+        ],
+        "summary": "Retrieve all user IDs for a specific pilot from Keycloak",
+        "operationId": "getAllUserIdsByPilotCode",
+        "parameters": [
+          {
+            "name": "pilotCode",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "User IDs retrieved successfully",
+            "content": {
+              "*/*": {
+                "schema": {
+                  "$ref": "#/components/schemas/BaseResponseListString"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "An unexpected error occured",
+            "content": {
+              "*/*": {
+                "schema": {
+                  "oneOf": [
+                    {
+                      "$ref": "#/components/schemas/BaseResponseString"
+                    },
+                    {
+                      "$ref": "#/components/schemas/BaseResponseMapStringString"
+                    }
+                  ]
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Unauthorized",
+            "content": {
+              "*/*": {
+                "schema": {
+                  "$ref": "#/components/schemas/BaseResponseMapStringString"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "Invalid authorization parameters. Check JWT or CSRF Token",
+            "content": {
+              "*/*": {
+                "schema": {
+                  "$ref": "#/components/schemas/BaseResponseMapStringString"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "Not Found",
+            "content": {
+              "*/*": {
+                "schema": {
+                  "$ref": "#/components/schemas/BaseResponseString"
+                }
+              }
+            }
+          },
+          "500": {
+            "description": "Unable to locate requested group ID in Keycloak",
+            "content": {
+              "*/*": {
+                "schema": {
+                  "$ref": "#/components/schemas/BaseResponseString"
+                }
+              }
+            }
+          }
+        },
+        "security": [
+          {
+            "bearerToken": []
+          }
+        ]
       }
     },
     "/api/users/auth-info": {
@@ -1199,12 +1426,39 @@
               }
             }
           },
+          "400": {
+            "description": "Bad Request",
+            "content": {
+              "*/*": {
+                "schema": {
+                  "oneOf": [
+                    {
+                      "$ref": "#/components/schemas/BaseResponseString"
+                    },
+                    {
+                      "$ref": "#/components/schemas/BaseResponseMapStringString"
+                    }
+                  ]
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Unauthorized",
+            "content": {
+              "*/*": {
+                "schema": {
+                  "$ref": "#/components/schemas/BaseResponseMapStringString"
+                }
+              }
+            }
+          },
           "403": {
             "description": "Invalid authorization parameters. Check JWT or CSRF Token",
             "content": {
               "*/*": {
                 "schema": {
-                  "$ref": "#/components/schemas/ApiResponseInfoMapStringString"
+                  "$ref": "#/components/schemas/BaseResponseMapStringString"
                 }
               }
             }
@@ -1214,7 +1468,7 @@
             "content": {
               "*/*": {
                 "schema": {
-                  "$ref": "#/components/schemas/ApiResponseInfoString"
+                  "$ref": "#/components/schemas/BaseResponseString"
                 }
               }
             }
@@ -1224,12 +1478,17 @@
             "content": {
               "*/*": {
                 "schema": {
-                  "$ref": "#/components/schemas/ApiResponseInfoString"
+                  "$ref": "#/components/schemas/BaseResponseString"
                 }
               }
             }
           }
-        }
+        },
+        "security": [
+          {
+            "bearerToken": []
+          }
+        ]
       }
     },
     "/api/admin/roles": {
@@ -1245,7 +1504,7 @@
             "content": {
               "*/*": {
                 "schema": {
-                  "$ref": "#/components/schemas/ApiResponseInfoListString"
+                  "$ref": "#/components/schemas/BaseResponseListUserRoleDTO"
                 }
               }
             }
@@ -1255,7 +1514,14 @@
             "content": {
               "*/*": {
                 "schema": {
-                  "$ref": "#/components/schemas/ApiResponseInfoListString"
+                  "oneOf": [
+                    {
+                      "$ref": "#/components/schemas/BaseResponseString"
+                    },
+                    {
+                      "$ref": "#/components/schemas/BaseResponseMapStringString"
+                    }
+                  ]
                 }
               }
             }
@@ -1265,17 +1531,17 @@
             "content": {
               "*/*": {
                 "schema": {
-                  "$ref": "#/components/schemas/ApiResponseInfoListString"
+                  "$ref": "#/components/schemas/BaseResponseMapStringString"
                 }
               }
             }
           },
           "403": {
-            "description": "Token inserted is invalid. It does not contain any information about the user role",
+            "description": "Invalid authorization parameters. Check JWT or CSRF Token",
             "content": {
               "*/*": {
                 "schema": {
-                  "$ref": "#/components/schemas/ApiResponseInfoMapStringString"
+                  "$ref": "#/components/schemas/BaseResponseMapStringString"
                 }
               }
             }
@@ -1285,7 +1551,7 @@
             "content": {
               "*/*": {
                 "schema": {
-                  "$ref": "#/components/schemas/ApiResponseInfoString"
+                  "$ref": "#/components/schemas/BaseResponseString"
                 }
               }
             }
@@ -1295,12 +1561,286 @@
             "content": {
               "*/*": {
                 "schema": {
-                  "$ref": "#/components/schemas/ApiResponseInfoString"
+                  "$ref": "#/components/schemas/BaseResponseString"
                 }
               }
             }
           }
-        }
+        },
+        "security": [
+          {
+            "bearerToken": []
+          }
+        ]
+      }
+    },
+    "/api/admin/roles/{userRole}/users": {
+      "get": {
+        "tags": [
+          "admin-controller"
+        ],
+        "summary": "Retrieve all users associated with a specific user role",
+        "operationId": "getAllUserByUserRole",
+        "parameters": [
+          {
+            "name": "userRole",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Users associated with the role retrieved successfully",
+            "content": {
+              "*/*": {
+                "schema": {
+                  "$ref": "#/components/schemas/BaseResponseListUserDTO"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Invalid request: either credentials or token must be provided!",
+            "content": {
+              "*/*": {
+                "schema": {
+                  "oneOf": [
+                    {
+                      "$ref": "#/components/schemas/BaseResponseString"
+                    },
+                    {
+                      "$ref": "#/components/schemas/BaseResponseMapStringString"
+                    }
+                  ]
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Authentication process failed!",
+            "content": {
+              "*/*": {
+                "schema": {
+                  "$ref": "#/components/schemas/BaseResponseMapStringString"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "Token inserted is invalid. It does not contain any information about the user role",
+            "content": {
+              "*/*": {
+                "schema": {
+                  "$ref": "#/components/schemas/BaseResponseMapStringString"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "Not Found",
+            "content": {
+              "*/*": {
+                "schema": {
+                  "$ref": "#/components/schemas/BaseResponseString"
+                }
+              }
+            }
+          },
+          "500": {
+            "description": "Internal Server Error",
+            "content": {
+              "*/*": {
+                "schema": {
+                  "$ref": "#/components/schemas/BaseResponseString"
+                }
+              }
+            }
+          }
+        },
+        "security": [
+          {
+            "bearerToken": []
+          }
+        ]
+      }
+    },
+    "/api/admin/roles/pilot/{pilotCode}": {
+      "get": {
+        "tags": [
+          "admin-controller"
+        ],
+        "summary": "Retrieve all user roles from Keycloak filtered by Pilot Code",
+        "operationId": "getAllUserRolesPerPilot",
+        "parameters": [
+          {
+            "name": "pilotCode",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "User roles retrieved successfully",
+            "content": {
+              "*/*": {
+                "schema": {
+                  "$ref": "#/components/schemas/BaseResponseListString"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Invalid request: either credentials or token must be provided!",
+            "content": {
+              "*/*": {
+                "schema": {
+                  "oneOf": [
+                    {
+                      "$ref": "#/components/schemas/BaseResponseString"
+                    },
+                    {
+                      "$ref": "#/components/schemas/BaseResponseMapStringString"
+                    }
+                  ]
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Authentication process failed!",
+            "content": {
+              "*/*": {
+                "schema": {
+                  "$ref": "#/components/schemas/BaseResponseMapStringString"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "User of role 'ADMIN' can only retrieve user roles only inside their organization",
+            "content": {
+              "*/*": {
+                "schema": {
+                  "$ref": "#/components/schemas/BaseResponseMapStringString"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "Not Found",
+            "content": {
+              "*/*": {
+                "schema": {
+                  "$ref": "#/components/schemas/BaseResponseString"
+                }
+              }
+            }
+          },
+          "500": {
+            "description": "Internal Server Error",
+            "content": {
+              "*/*": {
+                "schema": {
+                  "$ref": "#/components/schemas/BaseResponseString"
+                }
+              }
+            }
+          }
+        },
+        "security": [
+          {
+            "bearerToken": []
+          }
+        ]
+      }
+    },
+    "/api/admin/roles/names": {
+      "get": {
+        "tags": [
+          "admin-controller"
+        ],
+        "summary": "Retrieve all user role names from Keycloak",
+        "operationId": "getAllUserRoleNames",
+        "responses": {
+          "200": {
+            "description": "User roles retrieved successfully",
+            "content": {
+              "*/*": {
+                "schema": {
+                  "$ref": "#/components/schemas/BaseResponseListString"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Invalid request: either credentials or token must be provided!",
+            "content": {
+              "*/*": {
+                "schema": {
+                  "oneOf": [
+                    {
+                      "$ref": "#/components/schemas/BaseResponseString"
+                    },
+                    {
+                      "$ref": "#/components/schemas/BaseResponseMapStringString"
+                    }
+                  ]
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Authentication process failed!",
+            "content": {
+              "*/*": {
+                "schema": {
+                  "$ref": "#/components/schemas/BaseResponseMapStringString"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "Invalid authorization parameters. Check JWT or CSRF Token",
+            "content": {
+              "*/*": {
+                "schema": {
+                  "$ref": "#/components/schemas/BaseResponseMapStringString"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "Not Found",
+            "content": {
+              "*/*": {
+                "schema": {
+                  "$ref": "#/components/schemas/BaseResponseString"
+                }
+              }
+            }
+          },
+          "500": {
+            "description": "Internal Server Error",
+            "content": {
+              "*/*": {
+                "schema": {
+                  "$ref": "#/components/schemas/BaseResponseString"
+                }
+              }
+            }
+          }
+        },
+        "security": [
+          {
+            "bearerToken": []
+          }
+        ]
       }
     },
     "/api/admin/pilots": {
@@ -1316,7 +1856,7 @@
             "content": {
               "*/*": {
                 "schema": {
-                  "$ref": "#/components/schemas/ApiResponseInfoListString"
+                  "$ref": "#/components/schemas/BaseResponseListString"
                 }
               }
             }
@@ -1326,7 +1866,14 @@
             "content": {
               "*/*": {
                 "schema": {
-                  "$ref": "#/components/schemas/ApiResponseInfoListString"
+                  "oneOf": [
+                    {
+                      "$ref": "#/components/schemas/BaseResponseString"
+                    },
+                    {
+                      "$ref": "#/components/schemas/BaseResponseMapStringString"
+                    }
+                  ]
                 }
               }
             }
@@ -1336,7 +1883,7 @@
             "content": {
               "*/*": {
                 "schema": {
-                  "$ref": "#/components/schemas/ApiResponseInfoListString"
+                  "$ref": "#/components/schemas/BaseResponseMapStringString"
                 }
               }
             }
@@ -1346,7 +1893,7 @@
             "content": {
               "*/*": {
                 "schema": {
-                  "$ref": "#/components/schemas/ApiResponseInfoMapStringString"
+                  "$ref": "#/components/schemas/BaseResponseMapStringString"
                 }
               }
             }
@@ -1356,7 +1903,7 @@
             "content": {
               "*/*": {
                 "schema": {
-                  "$ref": "#/components/schemas/ApiResponseInfoString"
+                  "$ref": "#/components/schemas/BaseResponseString"
                 }
               }
             }
@@ -1366,12 +1913,17 @@
             "content": {
               "*/*": {
                 "schema": {
-                  "$ref": "#/components/schemas/ApiResponseInfoString"
+                  "$ref": "#/components/schemas/BaseResponseString"
                 }
               }
             }
           }
-        }
+        },
+        "security": [
+          {
+            "bearerToken": []
+          }
+        ]
       }
     },
     "/api/admin/pilot-roles": {
@@ -1383,11 +1935,11 @@
         "operationId": "getAllPilotRoles",
         "responses": {
           "200": {
-            "description": "Pilot roles retrieved successfully",
+            "description": "User roles retrieved successfully",
             "content": {
               "*/*": {
                 "schema": {
-                  "$ref": "#/components/schemas/ApiResponseInfoListString"
+                  "$ref": "#/components/schemas/BaseResponseListString"
                 }
               }
             }
@@ -1397,7 +1949,14 @@
             "content": {
               "*/*": {
                 "schema": {
-                  "$ref": "#/components/schemas/ApiResponseInfoListString"
+                  "oneOf": [
+                    {
+                      "$ref": "#/components/schemas/BaseResponseString"
+                    },
+                    {
+                      "$ref": "#/components/schemas/BaseResponseMapStringString"
+                    }
+                  ]
                 }
               }
             }
@@ -1407,17 +1966,17 @@
             "content": {
               "*/*": {
                 "schema": {
-                  "$ref": "#/components/schemas/ApiResponseInfoListString"
+                  "$ref": "#/components/schemas/BaseResponseMapStringString"
                 }
               }
             }
           },
           "403": {
-            "description": "Invalid authorization parameters. Check JWT or CSRF Token",
+            "description": "Token inserted is invalid. It does not contain any information about the user role",
             "content": {
               "*/*": {
                 "schema": {
-                  "$ref": "#/components/schemas/ApiResponseInfoMapStringString"
+                  "$ref": "#/components/schemas/BaseResponseMapStringString"
                 }
               }
             }
@@ -1427,7 +1986,7 @@
             "content": {
               "*/*": {
                 "schema": {
-                  "$ref": "#/components/schemas/ApiResponseInfoString"
+                  "$ref": "#/components/schemas/BaseResponseString"
                 }
               }
             }
@@ -1437,12 +1996,17 @@
             "content": {
               "*/*": {
                 "schema": {
-                  "$ref": "#/components/schemas/ApiResponseInfoString"
+                  "$ref": "#/components/schemas/BaseResponseString"
                 }
               }
             }
           }
-        }
+        },
+        "security": [
+          {
+            "bearerToken": []
+          }
+        ]
       }
     },
     "/api/users/delete": {
@@ -1478,7 +2042,24 @@
             "content": {
               "*/*": {
                 "schema": {
-                  "$ref": "#/components/schemas/ApiResponseInfoString"
+                  "oneOf": [
+                    {
+                      "$ref": "#/components/schemas/BaseResponseString"
+                    },
+                    {
+                      "$ref": "#/components/schemas/BaseResponseMapStringString"
+                    }
+                  ]
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Unauthorized",
+            "content": {
+              "*/*": {
+                "schema": {
+                  "$ref": "#/components/schemas/BaseResponseMapStringString"
                 }
               }
             }
@@ -1488,7 +2069,7 @@
             "content": {
               "*/*": {
                 "schema": {
-                  "$ref": "#/components/schemas/ApiResponseInfoMapStringString"
+                  "$ref": "#/components/schemas/BaseResponseMapStringString"
                 }
               }
             }
@@ -1498,7 +2079,7 @@
             "content": {
               "*/*": {
                 "schema": {
-                  "$ref": "#/components/schemas/ApiResponseInfoString"
+                  "$ref": "#/components/schemas/BaseResponseString"
                 }
               }
             }
@@ -1508,22 +2089,30 @@
             "content": {
               "*/*": {
                 "schema": {
-                  "$ref": "#/components/schemas/ApiResponseInfoString"
+                  "$ref": "#/components/schemas/BaseResponseString"
                 }
               }
             }
           }
-        }
+        },
+        "security": [
+          {
+            "bearerToken": []
+          }
+        ]
       }
     }
   },
   "components": {
     "schemas": {
-      "ApiResponseInfoString": {
+      "BaseResponseMapStringString": {
         "type": "object",
         "properties": {
           "data": {
-            "type": "string"
+            "type": "object",
+            "additionalProperties": {
+              "type": "string"
+            }
           },
           "errors": {
             "type": "object"
@@ -1540,14 +2129,11 @@
           }
         }
       },
-      "ApiResponseInfoMapStringString": {
+      "BaseResponseString": {
         "type": "object",
         "properties": {
           "data": {
-            "type": "object",
-            "additionalProperties": {
-              "type": "string"
-            }
+            "type": "string"
           },
           "errors": {
             "type": "object"
@@ -1664,7 +2250,7 @@
           }
         }
       },
-      "ApiResponseInfoVoid": {
+      "BaseResponseVoid": {
         "type": "object",
         "properties": {
           "data": {
@@ -1682,21 +2268,6 @@
           "timestamp": {
             "type": "string",
             "format": "date-time"
-          }
-        }
-      },
-      "CredentialsDTO": {
-        "required": [
-          "email",
-          "password"
-        ],
-        "type": "object",
-        "properties": {
-          "email": {
-            "type": "string"
-          },
-          "password": {
-            "type": "string"
           }
         }
       },
@@ -1722,73 +2293,22 @@
           }
         }
       },
-      "ApiResponseInfoAuthenticationResponseDTO": {
+      "CredentialsDTO": {
+        "required": [
+          "email",
+          "password"
+        ],
         "type": "object",
         "properties": {
-          "data": {
-            "$ref": "#/components/schemas/AuthenticationResponseDTO"
-          },
-          "errors": {
-            "type": "object"
-          },
-          "message": {
+          "email": {
             "type": "string"
           },
-          "success": {
-            "type": "boolean"
-          },
-          "timestamp": {
-            "type": "string",
-            "format": "date-time"
+          "password": {
+            "type": "string"
           }
         }
       },
-      "ApiResponseInfoListUserDTO": {
-        "type": "object",
-        "properties": {
-          "data": {
-            "type": "array",
-            "items": {
-              "$ref": "#/components/schemas/UserDTO"
-            }
-          },
-          "errors": {
-            "type": "object"
-          },
-          "message": {
-            "type": "string"
-          },
-          "success": {
-            "type": "boolean"
-          },
-          "timestamp": {
-            "type": "string",
-            "format": "date-time"
-          }
-        }
-      },
-      "ApiResponseInfoUserDTO": {
-        "type": "object",
-        "properties": {
-          "data": {
-            "$ref": "#/components/schemas/UserDTO"
-          },
-          "errors": {
-            "type": "object"
-          },
-          "message": {
-            "type": "string"
-          },
-          "success": {
-            "type": "boolean"
-          },
-          "timestamp": {
-            "type": "string",
-            "format": "date-time"
-          }
-        }
-      },
-      "ApiResponseInfoListString": {
+      "BaseResponseListString": {
         "type": "object",
         "properties": {
           "data": {
@@ -1812,11 +2332,14 @@
           }
         }
       },
-      "ApiResponseInfoUserRoleDTO": {
+      "BaseResponseListUserRoleDTO": {
         "type": "object",
         "properties": {
           "data": {
-            "$ref": "#/components/schemas/UserRoleDTO"
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/UserRoleDTO"
+            }
           },
           "errors": {
             "type": "object"
@@ -1832,6 +2355,37 @@
             "format": "date-time"
           }
         }
+      },
+      "BaseResponseListUserDTO": {
+        "type": "object",
+        "properties": {
+          "data": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/UserDTO"
+            }
+          },
+          "errors": {
+            "type": "object"
+          },
+          "message": {
+            "type": "string"
+          },
+          "success": {
+            "type": "boolean"
+          },
+          "timestamp": {
+            "type": "string",
+            "format": "date-time"
+          }
+        }
+      }
+    },
+    "securitySchemes": {
+      "bearerToken": {
+        "type": "http",
+        "scheme": "bearer",
+        "bearerFormat": "JWT"
       }
     }
   }

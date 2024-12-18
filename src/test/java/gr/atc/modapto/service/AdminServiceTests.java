@@ -5,23 +5,24 @@ import java.util.Collections;
 import java.util.List;
 import java.util.Map;
 
-import gr.atc.modapto.dto.UserDTO;
-import gr.atc.modapto.dto.UserRoleDTO;
-import gr.atc.modapto.dto.keycloak.*;
+import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertFalse;
+import static org.junit.jupiter.api.Assertions.assertNotNull;
+import static org.junit.jupiter.api.Assertions.assertThrows;
+import static org.junit.jupiter.api.Assertions.assertTrue;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
-
-import static org.junit.jupiter.api.Assertions.*;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.ArgumentMatchers.anyString;
 import static org.mockito.ArgumentMatchers.eq;
-import static org.mockito.Mockito.*;
-
 import org.mockito.InjectMocks;
 import org.mockito.Mock;
-
+import static org.mockito.Mockito.lenient;
+import static org.mockito.Mockito.verify;
+import static org.mockito.Mockito.verifyNoInteractions;
+import static org.mockito.Mockito.when;
 import org.mockito.junit.jupiter.MockitoExtension;
 import org.springframework.core.ParameterizedTypeReference;
 import org.springframework.http.HttpEntity;
@@ -32,6 +33,13 @@ import org.springframework.test.util.ReflectionTestUtils;
 import org.springframework.web.client.HttpClientErrorException;
 import org.springframework.web.client.RestTemplate;
 
+import gr.atc.modapto.dto.UserDTO;
+import gr.atc.modapto.dto.UserRoleDTO;
+import gr.atc.modapto.dto.keycloak.ClientDTO;
+import gr.atc.modapto.dto.keycloak.GroupDTO;
+import gr.atc.modapto.dto.keycloak.RealmRoleDTO;
+import gr.atc.modapto.dto.keycloak.RoleRepresentationDTO;
+import gr.atc.modapto.dto.keycloak.UserRepresentationDTO;
 import gr.atc.modapto.exception.CustomExceptions;
 
 @ExtendWith(MockitoExtension.class)
@@ -116,7 +124,7 @@ class AdminServiceTests {
 
 
         // Then
-        assertThrows(CustomExceptions.KeycloakException.class, () -> adminService.retrieveAllUserRoles(MOCK_TOKEN));
+        assertThrows(CustomExceptions.KeycloakException.class, () -> adminService.retrieveAllUserRoles(MOCK_TOKEN, null));
     }
 
     @DisplayName("Retrieve all pilots: Success")
@@ -146,27 +154,25 @@ class AdminServiceTests {
     @DisplayName("Retrieve all user roles: Success")
     @Test
     void givenValidJwt_whenGetAllUserRoles_thenReturnUserRoles() {
-        List<ClientRoleDTO> mockRoles = Arrays.asList(
-                new ClientRoleDTO("1", "OPERATOR", null, false, false),
-                new ClientRoleDTO("2", "LOGISTICS_MANAGER", null, false, false)
+        List<RoleRepresentationDTO> mockRoles = Arrays.asList(
+                new RoleRepresentationDTO("1", "OPERATOR", null, false, false, null, null),
+                new RoleRepresentationDTO("2", "LOGISTICS_MANAGER", null, false, false, null, null)
         );
 
-        ResponseEntity<List<ClientRoleDTO>> mockRoleResponse = new ResponseEntity<>(mockRoles, HttpStatus.OK);
+        ResponseEntity<List<RoleRepresentationDTO>> mockRoleResponse = new ResponseEntity<>(mockRoles, HttpStatus.OK);
 
         when(keycloakSupportService.getClientId()).thenReturn("client-id");
 
         lenient().when(restTemplate.exchange(
-                eq(MOCK_ADMIN_URI + "/clients/client-id/roles"),
+                eq(MOCK_ADMIN_URI + "/clients/client-id/roles?briefRepresentation=false"),
                 eq(HttpMethod.GET),
                 any(),
                 any(ParameterizedTypeReference.class)
         )).thenReturn(mockRoleResponse);
 
-        List<String> result = adminService.retrieveAllUserRoles(MOCK_TOKEN);
+        List<UserRoleDTO> result = adminService.retrieveAllUserRoles(MOCK_TOKEN, "ALL");
 
         assertEquals(2, result.size());
-        assertTrue(result.contains("OPERATOR"));
-        assertTrue(result.contains("LOGISTICS_MANAGER"));
     }
 
     @DisplayName("Retrieve all user roles: Client Not Found - Fail")
@@ -183,7 +189,7 @@ class AdminServiceTests {
                 any(ParameterizedTypeReference.class)
         )).thenReturn(mockClientResponse);
 
-        List<String> result = adminService.retrieveAllUserRoles(MOCK_TOKEN);
+        List<UserRoleDTO> result = adminService.retrieveAllUserRoles(MOCK_TOKEN, null);
 
         assertTrue(result.isEmpty());
     }

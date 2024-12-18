@@ -32,7 +32,7 @@ public class RoleRepresentationDTO {
 
     private boolean clientRole;
 
-    private String containerId; // This is the Realm Name
+    private String containerId; // This is the Realm ID
 
     private Map<String, List<String>> attributes;
 

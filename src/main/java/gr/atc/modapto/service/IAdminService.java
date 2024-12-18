@@ -12,7 +12,7 @@ public interface IAdminService {
 
     List<String> retrieveAllPilots(String token);
 
-    List<String> retrieveAllUserRoles(String token);
+    List<UserRoleDTO> retrieveAllUserRoles(String token, String pilot);
 
     boolean assignUserRoleToPilot(String userRole, String pilotCode, String clientId, String token);
 
