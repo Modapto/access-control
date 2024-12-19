@@ -5,7 +5,6 @@ import java.util.List;
 import gr.atc.modapto.dto.UserDTO;
 import gr.atc.modapto.service.IAdminService;
 import gr.atc.modapto.validation.ValidPilotCode;
-import gr.atc.modapto.validation.ValidUserRole;
 import io.swagger.v3.oas.annotations.security.SecurityRequirement;
 import org.apache.commons.lang3.StringUtils;
 import org.springframework.http.HttpStatus;
@@ -369,7 +368,7 @@ public class AdminController {
             @ApiResponse(responseCode = "403", description = "Token inserted is invalid. It does not contain any information about the user role")
     })
     @GetMapping("/roles/{userRole}/users")
-    public ResponseEntity<BaseResponse<List<UserDTO>>> getAllUserByUserRole(@AuthenticationPrincipal Jwt jwt, @ValidUserRole @PathVariable String userRole) {
+    public ResponseEntity<BaseResponse<List<UserDTO>>> getAllUserByUserRole(@AuthenticationPrincipal Jwt jwt, @PathVariable String userRole) {
         // Validate token proper format
         String role = JwtUtils.extractPilotRole(jwt);
         String pilot = JwtUtils.extractPilotCode(jwt);

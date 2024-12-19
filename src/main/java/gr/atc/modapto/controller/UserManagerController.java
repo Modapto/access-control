@@ -30,7 +30,6 @@ import gr.atc.modapto.service.IEmailService;
 import gr.atc.modapto.service.IUserManagerService;
 import gr.atc.modapto.util.JwtUtils;
 import gr.atc.modapto.validation.ValidPassword;
-import gr.atc.modapto.validation.ValidUserRole;
 import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.media.Content;
 import io.swagger.v3.oas.annotations.media.Schema;
@@ -431,7 +430,7 @@ public class UserManagerController {
       @ApiResponse(responseCode = "500", description = "Unable to locate requested client ID in Keycloak")
     })
     @GetMapping("/ids/role/{userRole}")
-    public ResponseEntity<BaseResponse<List<String>>> getAllUserIdsByUserRole(@AuthenticationPrincipal Jwt jwt, @ValidUserRole @PathVariable String userRole) {
+    public ResponseEntity<BaseResponse<List<String>>> getAllUserIdsByUserRole(@AuthenticationPrincipal Jwt jwt, @PathVariable String userRole) {
       List<UserDTO> users = userManagerService.fetchUsersByRole(userRole.toUpperCase(), jwt.getTokenValue());
       return new ResponseEntity<>(BaseResponse.success(users.stream().map(UserDTO::getUserId).toList(), "User IDs for role " + userRole + " retrieved successfully"), HttpStatus.OK);
     }

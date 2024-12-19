@@ -4,7 +4,6 @@ import com.fasterxml.jackson.annotation.JsonProperty;
 import gr.atc.modapto.dto.UserDTO;
 import gr.atc.modapto.enums.PilotCode;
 import gr.atc.modapto.enums.PilotRole;
-import gr.atc.modapto.enums.UserRole;
 import lombok.AllArgsConstructor;
 import lombok.Builder;
 import lombok.Data;
@@ -104,7 +103,7 @@ public class UserRepresentationDTO {
         }
 
         if (user.getUserRole() != null) {
-            keycloakUser.getAttributes().put(USER_ROLE, List.of(user.getUserRole().toString()));
+            keycloakUser.getAttributes().put(USER_ROLE, List.of(user.getUserRole()));
         }
 
         if (user.getPilotRole() != null) {
@@ -136,7 +135,7 @@ public class UserRepresentationDTO {
                 .firstName(keycloakUser.getFirstName() != null ? keycloakUser.getFirstName() : null)
                 .lastName(keycloakUser.getLastName() != null ? keycloakUser.getLastName() : null)
                 .username(keycloakUser.getUsername() != null ? keycloakUser.getUsername() : null)
-                .userRole(keycloakUser.getAttributes() != null && keycloakUser.getAttributes().containsKey(USER_ROLE) && !keycloakUser.getAttributes().get(USER_ROLE).isEmpty() ? UserRole.valueOf(keycloakUser.getAttributes().get(USER_ROLE).getFirst()) : null)
+                .userRole(keycloakUser.getAttributes() != null && keycloakUser.getAttributes().containsKey(USER_ROLE) && !keycloakUser.getAttributes().get(USER_ROLE).isEmpty() ? keycloakUser.getAttributes().get(USER_ROLE).getFirst() : null)
                 .pilotCode(keycloakUser.getAttributes() != null && keycloakUser.getAttributes().containsKey(PILOT_CODE) && !keycloakUser.getAttributes().get(PILOT_CODE).isEmpty() ? PilotCode.valueOf(keycloakUser.getAttributes().get(PILOT_CODE).getFirst()) : null)
                 .pilotRole(keycloakUser.getAttributes() != null && keycloakUser.getAttributes().containsKey(PILOT_ROLE) && !keycloakUser.getAttributes().get(PILOT_ROLE).isEmpty() ? PilotRole.valueOf(keycloakUser.getAttributes().get(PILOT_ROLE).getFirst()) : null)
                 .activationToken(keycloakUser.getAttributes() != null && keycloakUser.getAttributes().containsKey(ACTIVATION_TOKEN) && !keycloakUser.getAttributes().get(ACTIVATION_TOKEN).isEmpty() ? keycloakUser.getAttributes().get(ACTIVATION_TOKEN).getFirst() : null)

@@ -5,11 +5,9 @@ import com.fasterxml.jackson.annotation.JsonProperty;
 
 import gr.atc.modapto.enums.PilotCode;
 import gr.atc.modapto.enums.PilotRole;
-import gr.atc.modapto.enums.UserRole;
 import gr.atc.modapto.validation.ValidPassword;
 import gr.atc.modapto.validation.ValidPilotCode;
 import gr.atc.modapto.validation.ValidPilotRole;
-import gr.atc.modapto.validation.ValidUserRole;
 import jakarta.validation.constraints.Email;
 import lombok.AllArgsConstructor;
 import lombok.Builder;
@@ -43,9 +41,8 @@ public class UserDTO {
     @JsonProperty("email")
     private String email;
 
-    @ValidUserRole
     @JsonProperty("userRole")
-    private UserRole userRole;
+    private String userRole;
 
     @ValidPilotRole
     @JsonProperty("pilotRole")

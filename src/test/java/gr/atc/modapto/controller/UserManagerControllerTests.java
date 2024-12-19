@@ -40,7 +40,6 @@ import gr.atc.modapto.dto.UserDTO;
 import gr.atc.modapto.dto.keycloak.UserRepresentationDTO;
 import gr.atc.modapto.enums.PilotCode;
 import gr.atc.modapto.enums.PilotRole;
-import gr.atc.modapto.enums.UserRole;
 import gr.atc.modapto.service.KeycloakSupportService;
 import gr.atc.modapto.service.UserManagerService;
 
@@ -89,7 +88,7 @@ class UserManagerControllerTests {
                 .password("TestPass123@")
                 .pilotCode(PilotCode.CRF)
                 .pilotRole(PilotRole.ADMIN)
-                .userRole(UserRole.LOGISTICS_MANAGER)
+                .userRole("LOGISTICS_MANAGER")
                 .build();
 
         String tokenValue = "mock.jwt.token";

@@ -2,11 +2,15 @@ package gr.atc.modapto.dto;
 
 import com.fasterxml.jackson.annotation.JsonInclude;
 import com.fasterxml.jackson.annotation.JsonProperty;
+
 import gr.atc.modapto.enums.PilotCode;
 import gr.atc.modapto.enums.PilotRole;
 import gr.atc.modapto.validation.ValidPilotCode;
 import gr.atc.modapto.validation.ValidPilotRole;
-import lombok.*;
+import lombok.AllArgsConstructor;
+import lombok.Builder;
+import lombok.Data;
+import lombok.NoArgsConstructor;
 
 @Data
 @AllArgsConstructor
