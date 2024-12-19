@@ -44,36 +44,40 @@ public class RoleRepresentationDTO {
      * @return RoleRepresentationDTO
      */
     public static RoleRepresentationDTO toRoleRepresentation(UserRoleDTO userRole, RoleRepresentationDTO existingRole) {
-        RoleRepresentationDTO roleRepr = new RoleRepresentationDTO();
-        roleRepr.setName(userRole.getName() != null ? userRole.getName().toUpperCase() : null);
+      RoleRepresentationDTO roleRepr = existingRole == null ? new RoleRepresentationDTO() : existingRole;
 
-        Map<String, List<String>> attributes;
-        // Used when role is initialized
-        if (existingRole == null) {
-            roleRepr.setComposite(false);
-            roleRepr.setDescription("Role for pilot '" + userRole.getPilotCode() + "' and pilot role of '" + userRole.getPilotRole() + "'");
-            roleRepr.setClientRole(true);
-            attributes = new HashMap<>();
-        } else {
-            attributes = existingRole.getAttributes() != null ? existingRole.getAttributes() : new HashMap<>(); // Ensure that attributes is not empty or create a new HashMap
-        }
+      if (userRole.getName() != null)
+          roleRepr.setName(userRole.getName().isEmpty() ? roleRepr.getName() : userRole.getName().toUpperCase());
 
-        // Add pilot role attribute if included in UserRoleDTO
-        Optional.ofNullable(userRole.getPilotRole())
-                .map(Object::toString)
-                .map(String::toUpperCase)
-                .ifPresent(pilotRole -> attributes.put(PILOT_ROLE, List.of(pilotRole)));
+      Map<String, List<String>> attributes;
+      // Used when role is initialized
+      if (existingRole == null) {
+          roleRepr.setComposite(false);
+          roleRepr.setClientRole(true);
+          attributes = new HashMap<>();
+      } else {
+          attributes = existingRole.getAttributes() != null ? existingRole.getAttributes() : new HashMap<>(); // Ensure that attributes is not empty or create a new HashMap
+      }
 
-        // Add pilot code attribute if included in UserRoleDTO
-        Optional.ofNullable(userRole.getPilotCode())
-                .map(Object::toString)
-                .map(String::toUpperCase)
-                .ifPresent(pilotCode -> attributes.put(PILOT_CODE, List.of(pilotCode)));
+      // Add pilot role attribute if included in UserRoleDTO
+      Optional.ofNullable(userRole.getPilotRole())
+              .map(Object::toString)
+              .map(String::toUpperCase)
+              .ifPresent(pilotRole -> attributes.put(PILOT_ROLE, List.of(pilotRole)));
 
-        // Update the attributes
-        roleRepr.setAttributes(attributes);
+      // Add pilot code attribute if included in UserRoleDTO
+      Optional.ofNullable(userRole.getPilotCode())
+              .map(Object::toString)
+              .map(String::toUpperCase)
+              .ifPresent(pilotCode -> attributes.put(PILOT_CODE, List.of(pilotCode)));
 
-        return roleRepr;
+      // Update the attributes
+      roleRepr.setAttributes(attributes);
+
+      // Update the description
+      roleRepr.setDescription("Role for pilot '" + roleRepr.getAttributes().get(PILOT_CODE).getFirst() + "' and pilot role of '" + roleRepr.getAttributes().get(PILOT_ROLE).getFirst() + "'");
+
+      return roleRepr;
     }
 
     /**
