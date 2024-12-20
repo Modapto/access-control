@@ -53,16 +53,16 @@ public class KeycloakSupportService {
     // Called after the creation of Bean to retrieve client ID
     @PostConstruct
     public void init() {
-        this.cachedClientId = retrieveClientId(retrieveComponentJwtToken());
+        this.cachedClientId = retrieveClientId(retrieveComponentJwtToken(), clientId);
     }
 
     @Scheduled(fixedRate = 24 * 60 * 60 * 1000)
     public void refreshClientId() {
-        this.cachedClientId = retrieveClientId(retrieveComponentJwtToken());
+        this.cachedClientId = retrieveClientId(retrieveComponentJwtToken(),clientId);
     }
 
     public String getClientId() {
-        return cachedClientId != null ? cachedClientId : retrieveClientId(retrieveComponentJwtToken());
+        return cachedClientId != null ? cachedClientId : retrieveClientId(retrieveComponentJwtToken(), clientId);
     }
 
     /**
@@ -115,7 +115,7 @@ public class KeycloakSupportService {
      * @param token : JWT Token Value
      * @return String : Client ID
      */
-    private String retrieveClientId(String token){
+    public String retrieveClientId(String token, String clientName){
         try {
             // Set Headers
             HttpHeaders headers = new HttpHeaders();
@@ -136,7 +136,7 @@ public class KeycloakSupportService {
             // Valid Resposne
             if (response.getStatusCode().is2xxSuccessful() && response.getBody() != null )
                 return response.getBody().stream()
-                        .filter(client -> client.getClientId().equals(clientId))
+                        .filter(client -> client.getClientId().equals(clientName))
                         .map(ClientDTO::getId)
                         .findFirst()
                         .orElse(null);

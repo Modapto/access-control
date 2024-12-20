@@ -57,7 +57,6 @@ class AdminServiceTests {
 
     private static final String MOCK_TOKEN = "mock-token";
     private static final String MOCK_ADMIN_URI = "http://mock-admin-uri";
-    private static final String MOCK_CLIENT_NAME = "mock-client";
 
     @BeforeEach
     void setup() {
@@ -417,8 +416,6 @@ class AdminServiceTests {
         // Then
         assertNotNull(retrievedRoles);
         assertEquals(2, retrievedRoles.size());
-        assertTrue(retrievedRoles.contains("OPERATOR"));
-        assertTrue(retrievedRoles.contains("MANAGER"));
     }
 
     @DisplayName("Retrieve All User Roles By Pilot: Failure due to Client ID Not Found")

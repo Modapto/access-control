@@ -57,7 +57,7 @@ public class UserRepresentationDTO {
     private List<String> groups;
 
     // Used both for creating and updating a User
-    public static UserRepresentationDTO fromUserDTO(UserDTO user, UserRepresentationDTO existingUser) {
+    public static UserRepresentationDTO toRoleRepresentationDTO(UserDTO user, UserRepresentationDTO existingUser) {
         if (user == null)
             return existingUser;
 
@@ -84,7 +84,8 @@ public class UserRepresentationDTO {
             keycloakUser.setEmailVerified(true);
         }
 
-        if (user.getUsername() != null) {
+        // Set the Username upon the creation of user only
+        if (user.getUsername() != null && existingUser == null) {
             keycloakUser.setUsername(user.getUsername());
         }
 

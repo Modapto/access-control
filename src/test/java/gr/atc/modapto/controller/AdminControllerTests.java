@@ -544,9 +544,9 @@ class AdminControllerTests {
         assertThat(response.andReturn().getResponse().getStatus()).isEqualTo(HttpStatus.FORBIDDEN.value());
     }
 
-    @DisplayName("Successful retrieval of user roles for SUPER_ADMIN")
+    @DisplayName("Retrieval of user role names for a specific pilot: Success")
     @Test
-    void givenValidJwtAndPilotCode_whenSuperAdmin_thenReturnUserRoles() throws Exception {
+    void givenValidJwtAndPilotCode_whenSuperAdmin_thenReturnUserRoleNames() throws Exception {
         // Given
         String pilotCode = "SEW";
         List<String> mockRoles = Arrays.asList("ROLE1", "ROLE2");
@@ -560,6 +560,34 @@ class AdminControllerTests {
                 .thenReturn(mockRoles);
 
         // When
+        ResultActions response = mockMvc.perform(get("/api/admin/roles/names/pilot/{pilotCode}", pilotCode)
+                .contentType(MediaType.APPLICATION_JSON));
+
+        // Then
+        response.andExpect(status().isOk())
+                .andExpect(jsonPath("$.success", is(true)))
+                .andExpect(jsonPath("$.message", is("User role names retrieved successfully")))
+                .andExpect(jsonPath("$.data[0]", is("ROLE1")))
+                .andExpect(jsonPath("$.data[1]", is("ROLE2")));
+    }
+
+    @DisplayName("Retrieval of user roles for a specific pilot: Success")
+    @Test
+    void givenValidJwtAndPilotCode_whenSuperAdmin_thenReturnUserRole() throws Exception {
+        // Given
+        String pilotCode = "SEW";
+        List<UserRoleDTO> mockRoles = Arrays.asList(UserRoleDTO.builder().name("ROLE1").build(),
+                UserRoleDTO.builder().name("ROLE2").build());
+
+        // Mock JWT authentication
+        JwtAuthenticationToken jwtAuthenticationToken = new JwtAuthenticationToken(jwt, List.of(new SimpleGrantedAuthority("ROLE_SUPER_ADMIN")));
+        SecurityContextHolder.getContext().setAuthentication(jwtAuthenticationToken);
+
+        // Mock service method
+        when(adminService.retrieveAllUserRoles(anyString(), anyString()))
+                .thenReturn(mockRoles);
+
+        // When
         ResultActions response = mockMvc.perform(get("/api/admin/roles/pilot/{pilotCode}", pilotCode)
                 .contentType(MediaType.APPLICATION_JSON));
 
@@ -567,9 +595,10 @@ class AdminControllerTests {
         response.andExpect(status().isOk())
                 .andExpect(jsonPath("$.success", is(true)))
                 .andExpect(jsonPath("$.message", is("User roles retrieved successfully")))
-                .andExpect(jsonPath("$.data[0]", is("ROLE1")))
-                .andExpect(jsonPath("$.data[1]", is("ROLE2")));
+                .andExpect(jsonPath("$.data[0].name", is("ROLE1")))
+                .andExpect(jsonPath("$.data[1].name", is("ROLE2")));
     }
+
 
     @DisplayName("Get a User Role: Forbidden for 'USER' role")
     @Test

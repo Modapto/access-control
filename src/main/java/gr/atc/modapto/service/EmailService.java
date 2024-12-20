@@ -1,15 +1,16 @@
 package gr.atc.modapto.service;
 
-import jakarta.mail.MessagingException;
-import jakarta.mail.internet.MimeMessage;
-import lombok.extern.slf4j.Slf4j;
+import java.util.concurrent.CompletableFuture;
+
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.mail.javamail.JavaMailSender;
 import org.springframework.mail.javamail.MimeMessageHelper;
 import org.springframework.scheduling.annotation.Async;
 import org.springframework.stereotype.Service;
 
-import java.util.concurrent.CompletableFuture;
+import jakarta.mail.MessagingException;
+import jakarta.mail.internet.MimeMessage;
+import lombok.extern.slf4j.Slf4j;
 
 @Service
 @Slf4j
@@ -63,7 +64,7 @@ public class EmailService implements IEmailService {
   public CompletableFuture<Void> sendActivationLink(String username, String email, String activationToken) {
     return CompletableFuture.runAsync(() -> {
         // Create the activation link
-        String activationLink = String.format("%s/activate?token=%s", frontendUrl, activationToken);
+        String activationLink = String.format("%s/activate-account?token=%s", frontendUrl, activationToken);
 
         // Create the email template
         String htmlContent = String.format("""

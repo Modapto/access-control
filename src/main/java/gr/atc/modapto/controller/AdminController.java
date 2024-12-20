@@ -314,7 +314,7 @@ public class AdminController {
     }
 
     /**
-     * GET all Keycloak User Roles filter by Pilot
+     * GET all Keycloak User Roles filtered by Pilot
      *
      * @param jwt : JWT Token
      * @param pilotCode : Pilot Code
@@ -331,7 +331,7 @@ public class AdminController {
             @ApiResponse(responseCode = "403", description = "Token inserted is invalid. It does not contain any information about the user role or the pilot")
     })
     @GetMapping("/roles/pilot/{pilotCode}")
-    public ResponseEntity<BaseResponse<List<String>>> getAllUserRolesPerPilot(@AuthenticationPrincipal Jwt jwt, @ValidPilotCode @PathVariable String pilotCode) {
+    public ResponseEntity<BaseResponse<List<UserRoleDTO>>> getAllUserRolesPerPilot(@AuthenticationPrincipal Jwt jwt, @ValidPilotCode @PathVariable String pilotCode) {
         // Validate token proper format
         String role = JwtUtils.extractPilotRole(jwt);
         String pilot = JwtUtils.extractPilotCode(jwt);
@@ -348,7 +348,44 @@ public class AdminController {
         if (role.equalsIgnoreCase(PilotRole.ADMIN.toString()) && !pilot.equalsIgnoreCase(pilotCode))
             return new ResponseEntity<>(BaseResponse.error(UNAUTHORIZED_ACTION, "User of role 'ADMIN' can only retrieve user roles only inside their organization"), HttpStatus.FORBIDDEN);
 
-        return new ResponseEntity<>(BaseResponse.success(adminService.retrieveAllUserRolesByPilot(jwt.getTokenValue(), pilotCode.toUpperCase()), "User roles retrieved successfully"), HttpStatus.OK);
+        return new ResponseEntity<>(BaseResponse.success(adminService.retrieveAllUserRoles(jwt.getTokenValue(), pilotCode.toUpperCase()), "User roles retrieved successfully"), HttpStatus.OK);
+    }
+    /**
+     * GET all Keycloak User Role names filtered by Pilot
+     *
+     * @param jwt : JWT Token
+     * @param pilotCode : Pilot Code
+     * @return List<String> : List of User Roles
+     */
+    @Operation(summary = "Retrieve all user role names from Keycloak filtered by Pilot Code", security = @SecurityRequirement(name = "bearerToken"))
+    @ApiResponses(value = {
+            @ApiResponse(responseCode = "200", description = "User role names retrieved successfully"),
+            @ApiResponse(responseCode = "400", description = "Invalid request: either credentials or token must be provided!"),
+            @ApiResponse(responseCode = "401", description = "Authentication process failed!"),
+            @ApiResponse(responseCode = "403", description = "Invalid authorization parameters. Check JWT or CSRF Token"),
+            @ApiResponse(responseCode = "403", description = "User of role 'USER' can not retrieve information for user roles"),
+            @ApiResponse(responseCode = "403", description = "User of role 'ADMIN' can only retrieve user roles only inside their organization"),
+            @ApiResponse(responseCode = "403", description = "Token inserted is invalid. It does not contain any information about the user role or the pilot")
+    })
+    @GetMapping("/roles/names/pilot/{pilotCode}")
+    public ResponseEntity<BaseResponse<List<String>>> getAllUserRolesNamesPerPilot(@AuthenticationPrincipal Jwt jwt, @ValidPilotCode @PathVariable String pilotCode) {
+        // Validate token proper format
+        String role = JwtUtils.extractPilotRole(jwt);
+        String pilot = JwtUtils.extractPilotCode(jwt);
+
+        // Check if JWT contains the proper information
+        if (StringUtils.isAnyBlank(role, pilot))
+            return new ResponseEntity<>(BaseResponse.error(INVALID_TOKEN), HttpStatus.FORBIDDEN);
+
+        // Refrain users from retrieving data
+        if (role.equalsIgnoreCase(PilotRole.USER.toString()))
+            return new ResponseEntity<>(BaseResponse.error(UNAUTHORIZED_ACTION, USER_FORBIDDEN), HttpStatus.FORBIDDEN);
+
+        // Validate that Admin can only create a role inside his/her organization
+        if (role.equalsIgnoreCase(PilotRole.ADMIN.toString()) && !pilot.equalsIgnoreCase(pilotCode))
+            return new ResponseEntity<>(BaseResponse.error(UNAUTHORIZED_ACTION, "User of role 'ADMIN' can only retrieve user roles only inside their organization"), HttpStatus.FORBIDDEN);
+
+        return new ResponseEntity<>(BaseResponse.success(adminService.retrieveAllUserRolesByPilot(jwt.getTokenValue(), pilotCode.toUpperCase()), "User role names retrieved successfully"), HttpStatus.OK);
     }
 
     /**

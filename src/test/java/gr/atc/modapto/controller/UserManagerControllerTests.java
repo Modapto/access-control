@@ -286,7 +286,7 @@ class UserManagerControllerTests {
     @Test
     void givenExistingUser_whenCreateUser_thenReturnExpectationFailed() throws Exception {
         // Given
-        UserRepresentationDTO userRepr = UserRepresentationDTO.fromUserDTO(user, null);
+        UserRepresentationDTO userRepr = UserRepresentationDTO.toRoleRepresentationDTO(user, null);
         given(userManagerService.retrieveUserByEmail(anyString(), anyString())).willReturn(userRepr);
 
         // Mock JWT authentication
@@ -309,7 +309,7 @@ class UserManagerControllerTests {
     void givenValidUser_whenUpdateUser_thenReturnSuccess() throws Exception {
         // Given
         given(userManagerService.updateUser(any(UserDTO.class), isNull(), anyString(), anyString())).willReturn(true);
-        given(userManagerService.retrieveUserById(anyString(), anyString())).willReturn(UserRepresentationDTO.fromUserDTO(user, null));
+        given(userManagerService.retrieveUserById(anyString(), anyString())).willReturn(UserRepresentationDTO.toRoleRepresentationDTO(user, null));
 
         // Mock JWT authentication
         JwtAuthenticationToken jwtAuthenticationToken = new JwtAuthenticationToken(jwt, List.of(new SimpleGrantedAuthority("ROLE_ADMIN")));
@@ -332,7 +332,7 @@ class UserManagerControllerTests {
     void givenSimpleUser_whenUpdateOtherUserOutsidePilot_thenReturnForbidden() throws Exception {
         // Given
         Jwt mockToken = createMockJwtToken("OPERATOR", "USER", "SEW");
-        given(userManagerService.retrieveUserById(anyString(), anyString())).willReturn(UserRepresentationDTO.fromUserDTO(user, null));
+        given(userManagerService.retrieveUserById(anyString(), anyString())).willReturn(UserRepresentationDTO.toRoleRepresentationDTO(user, null));
 
         // Mock JWT authentication
         JwtAuthenticationToken jwtAuthenticationToken = new JwtAuthenticationToken(mockToken,
@@ -356,7 +356,7 @@ class UserManagerControllerTests {
     void givenAdminUser_whenUpdateOtherUserInAnotherPilot_thenReturnForbidden() throws Exception {
         // Given
         Jwt mockToken = createMockJwtToken("OPERATOR", "ADMIN", "SEW");
-        given(userManagerService.retrieveUserById(anyString(), anyString())).willReturn(UserRepresentationDTO.fromUserDTO(user, null));
+        given(userManagerService.retrieveUserById(anyString(), anyString())).willReturn(UserRepresentationDTO.toRoleRepresentationDTO(user, null));
 
         // Mock JWT authentication
         JwtAuthenticationToken jwtAuthenticationToken = new JwtAuthenticationToken(mockToken,
@@ -380,7 +380,7 @@ class UserManagerControllerTests {
     void givenValidUser_whenUpdateUserFails_thenReturnServerError() throws Exception {
         // Given
         given(userManagerService.updateUser(any(UserDTO.class), any(UserRepresentationDTO.class), anyString(), anyString())).willReturn(false);
-        given(userManagerService.retrieveUserById(anyString(), anyString())).willReturn(UserRepresentationDTO.fromUserDTO(user, null));
+        given(userManagerService.retrieveUserById(anyString(), anyString())).willReturn(UserRepresentationDTO.toRoleRepresentationDTO(user, null));
 
         // Mock JWT authentication
         JwtAuthenticationToken jwtAuthenticationToken = new JwtAuthenticationToken(jwt, List.of(new SimpleGrantedAuthority("ROLE_USER")));

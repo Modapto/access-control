@@ -18,11 +18,11 @@ public class PasswordValidator implements ConstraintValidator<ValidPassword, Str
             - At least one digit
             - At least one lower case char
             - At least one Capital char
-            - At least one special char
+            - At least one special char -> !@#$%^&*()_+-=[]{};':"\|,.<>/?~`
             - No whitespace
             - From 8 to 20 chars
          */
-        String regExPattern = "^(?=.*\\d)(?=.*[a-z])(?=.*[A-Z])(?=.*[@#$%^&+=])(?=\\S+$).{8,20}$";
+        String regExPattern = "^(?=.*\\d)(?=.*[a-z])(?=.*[A-Z])(?=.*[!@#$%^&*()_+\\-=\\[\\]{};':\"\\\\|,.<>\\/?~`])(?=\\S+$).{8,20}$";
 
         // Build pattern and create a matcher to check the password
         Pattern pattern = Pattern.compile(regExPattern, Pattern.CASE_INSENSITIVE);

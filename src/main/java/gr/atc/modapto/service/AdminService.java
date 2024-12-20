@@ -40,6 +40,9 @@ public class AdminService implements IAdminService {
     // Strings commonly used
     private static final List<String> SUPER_ADMIN_EXCLUDED_ROLES = List.of("default-roles-modapto-dev", "uma_authorization", "offline_access");
     private static final List<String> ADMIN_EXCLUDED_ROLES = List.of("default-roles-modapto-dev", "uma_authorization", "offline_access", "SUPER_ADMIN");
+    private static final String ROLE_NOT_FOUND_MESSAGE = "User Role not found in Keycloak";
+    private static final String CLIENT_NOT_FOUND_MESSAGE = "Client not found in Keycloak";
+    private static final String GROUP_NOT_FOUND_MESSAGE = "Group not found in Keycloak";
 
     public AdminService(KeycloakSupportService keycloakSupportService){
         this.keycloakSupportService = keycloakSupportService;
@@ -114,7 +117,7 @@ public class AdminService implements IAdminService {
             );
 
             // Valid Resposne
-            if (response.getStatusCode().is2xxSuccessful() && response.getBody() != null )
+            if (response.getStatusCode().is2xxSuccessful() && response.getBody() != null)
                 return response.getBody().stream()
                         .map(GroupDTO::getName)
                         .toList();
@@ -149,7 +152,7 @@ public class AdminService implements IAdminService {
             // Retrieve Client ID
             String clientId = keycloakSupportService.getClientId();
             if (clientId == null){
-                log.error("Unable to locate the client's id");
+                log.error(CLIENT_NOT_FOUND_MESSAGE);
                 return Collections.emptyList();
             }
 
@@ -164,15 +167,16 @@ public class AdminService implements IAdminService {
             // Valid Resposne
             if (response.getStatusCode().is2xxSuccessful() && response.getBody() != null )
                 // Return results either filtered by Pilot or return all results
-                if (pilot.equals("ALL")) // Case for SUPER_ADMIN
+                if (pilot.equals("ALL")){ // Case for SUPER_ADMIN
                     return response.getBody().stream()
-                            .map(RoleRepresentationDTO::fromRoleRepresentation)
+                            .map(RoleRepresentationDTO::toUserRoleDTO)
                             .toList();
-                else // Case for ADMINS
+                } else { // Case for ADMINS
                     return response.getBody().stream()
-                            .map(RoleRepresentationDTO::fromRoleRepresentation)
+                            .map(RoleRepresentationDTO::toUserRoleDTO)
                             .filter(role -> pilot.equals(role.getPilotCode() != null ? role.getPilotCode().toString() : null))
                             .toList();
+                }
 
             // Invalid Response return empty List
             return Collections.emptyList();
@@ -209,7 +213,7 @@ public class AdminService implements IAdminService {
             // Retrieve clientId and check if is not null
             String clientId = keycloakSupportService.getClientId();
             if (clientId == null)
-                throw new DataRetrievalException("Unable to locate client ID in Keycloak");
+                throw new DataRetrievalException(CLIENT_NOT_FOUND_MESSAGE);
 
             // Create the URI and make the POST request
             String requestUri = adminUri.concat("/clients/").concat(clientId).concat("/roles");
@@ -249,8 +253,8 @@ public class AdminService implements IAdminService {
     public UserRoleDTO retrieveUserRole(String tokenValue, String roleName) {
         RoleRepresentationDTO existingRole = findRoleRepresentationByName(roleName, keycloakSupportService.getClientId(), tokenValue);
         if (existingRole == null)
-            throw new DataRetrievalException("Unable to locate requested role in Keycloak");
-        return RoleRepresentationDTO.fromRoleRepresentation(existingRole);
+            throw new DataRetrievalException(ROLE_NOT_FOUND_MESSAGE);
+        return RoleRepresentationDTO.toUserRoleDTO(existingRole);
     }
 
     /**
@@ -273,7 +277,7 @@ public class AdminService implements IAdminService {
         // Retrieve clientId and check if is not null
         String clientId = keycloakSupportService.getClientId();
         if (clientId == null)
-            throw new DataRetrievalException("Unable to locate client ID in Keycloak");
+            throw new DataRetrievalException(CLIENT_NOT_FOUND_MESSAGE);
 
         // Create the URI and make the POST request
         StringBuilder requestUri = new StringBuilder();
@@ -316,12 +320,12 @@ public class AdminService implements IAdminService {
         // Retrieve clientId and check if is not null
         String clientId = keycloakSupportService.getClientId();
         if (clientId == null)
-            throw new DataRetrievalException("Unable to locate client ID in Keycloak");
+            throw new DataRetrievalException(CLIENT_NOT_FOUND_MESSAGE);
 
         // Try locating the RoleRepresentation
         RoleRepresentationDTO existingRole = findRoleRepresentationByName(existingRoleName, clientId, tokenValue);
         if (existingRole == null)
-            throw new DataRetrievalException("Unable to locate requested role in Keycloak");
+            throw new DataRetrievalException(ROLE_NOT_FOUND_MESSAGE);
 
         // Create the Representation
         RoleRepresentationDTO roleRepr = RoleRepresentationDTO.toRoleRepresentation(userRole, existingRole);
@@ -361,12 +365,12 @@ public class AdminService implements IAdminService {
         // Retrieve clientId and check if is not null
         String clientId = keycloakSupportService.getClientId();
         if (clientId == null)
-            throw new DataRetrievalException("Unable to locate client ID in Keycloak");
+            throw new DataRetrievalException(ROLE_NOT_FOUND_MESSAGE);
 
         // Retrieve Group ID
         String groupId = keycloakSupportService.retrievePilotCodeID(pilotCode, tokenValue);
         if (groupId == null)
-            throw new DataRetrievalException("Unable to locate requested group ID in Keycloak");
+            throw new DataRetrievalException(GROUP_NOT_FOUND_MESSAGE);
 
         // Set Headers
         HttpHeaders headers = new HttpHeaders();
@@ -414,7 +418,7 @@ public class AdminService implements IAdminService {
         // Retrieve clientId and check if is not null
         String clientId = keycloakSupportService.getClientId();
         if (clientId == null)
-            throw new DataRetrievalException("Unable to locate client ID in Keycloak");
+            throw new DataRetrievalException(ROLE_NOT_FOUND_MESSAGE);
 
 
         // Set Headers
@@ -464,12 +468,12 @@ public class AdminService implements IAdminService {
         // Retrieve Group ID
         String groupId = keycloakSupportService.retrievePilotCodeID(pilotCode, token);
         if (groupId == null)
-            throw new DataRetrievalException("Unable to locate requested group ID in Keycloak");
+            throw new DataRetrievalException(GROUP_NOT_FOUND_MESSAGE);
 
         // Retrieve Role Representation by Name
         RoleRepresentationDTO roleRepr = findRoleRepresentationByName(userRole, clientId, token);
         if (roleRepr == null)
-            throw new DataRetrievalException("Unable to locate requested role in Keycloak");
+            throw new DataRetrievalException(ROLE_NOT_FOUND_MESSAGE);
 
         // Set Headers
         HttpHeaders headers = new HttpHeaders();

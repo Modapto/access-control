@@ -70,7 +70,7 @@ public class UserManagerService implements IUserManagerService {
     private static final String ACTIVATION_EXPIRY = "activation_expiry";
 
     // Arrays of realm-manage roles
-    private static final List<String> USER_ROLES_MANAGEMENT_ARRAY = List.of("manage-users", "query-users");
+    private static final List<String> USER_ROLES_MANAGEMENT_ARRAY = List.of("manage-users", "query-users", "view-users");
     private static final List<String> ADMIN_ROLES_MANAGEMENT_ARRAY = List.of(
             "query-realms",
             "manage-clients",
@@ -166,7 +166,7 @@ public class UserManagerService implements IUserManagerService {
             headers.setBearerAuth(token);
             headers.setContentType(MediaType.APPLICATION_JSON);
 
-            HttpEntity<UserRepresentationDTO> entity = new HttpEntity<>(UserRepresentationDTO.fromUserDTO(user, null), headers);
+            HttpEntity<UserRepresentationDTO> entity = new HttpEntity<>(UserRepresentationDTO.toRoleRepresentationDTO(user, null), headers);
 
             String requestUri = adminUri.concat("/users");
             ResponseEntity<Object> response = restTemplate.exchange(
@@ -214,7 +214,7 @@ public class UserManagerService implements IUserManagerService {
                     return false;
             }
 
-            HttpEntity<UserRepresentationDTO> entity = new HttpEntity<>(UserRepresentationDTO.fromUserDTO(user, existingUser), headers);
+            HttpEntity<UserRepresentationDTO> entity = new HttpEntity<>(UserRepresentationDTO.toRoleRepresentationDTO(user, existingUser), headers);
 
             String requestUri = adminUri.concat("/users/").concat(userId);
             ResponseEntity<Object> response = restTemplate.exchange(
@@ -591,7 +591,7 @@ public class UserManagerService implements IUserManagerService {
         return CompletableFuture.runAsync(() -> {
             try {
                 // Locate client's id
-                String clientID = keycloakSupportService.getClientId();
+                String clientID = keycloakSupportService.retrieveClientId(token, "realm-management");
                 if(clientID == null)
                     return;
 
@@ -818,7 +818,6 @@ public class UserManagerService implements IUserManagerService {
                     entity,
                     new ParameterizedTypeReference<>() {}
             );
-
 
             // Assign realm roles according to the Realm Role of User
             if(response.getStatusCode().is2xxSuccessful() && response.getBody() != null && !response.getBody().isEmpty()){
