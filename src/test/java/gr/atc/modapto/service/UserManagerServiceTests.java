@@ -1,5 +1,40 @@
 package gr.atc.modapto.service;
 
+import java.net.URI;
+import java.util.Collections;
+import java.util.HashMap;
+import java.util.List;
+import java.util.Map;
+import java.util.concurrent.CompletableFuture;
+
+import static org.junit.jupiter.api.Assertions.assertDoesNotThrow;
+import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertFalse;
+import static org.junit.jupiter.api.Assertions.assertNotNull;
+import static org.junit.jupiter.api.Assertions.assertThrows;
+import static org.junit.jupiter.api.Assertions.assertTrue;
+import org.junit.jupiter.api.BeforeEach;
+import org.junit.jupiter.api.DisplayName;
+import org.junit.jupiter.api.Test;
+import org.junit.jupiter.api.extension.ExtendWith;
+import static org.mockito.ArgumentMatchers.any;
+import static org.mockito.ArgumentMatchers.eq;
+import org.mockito.InjectMocks;
+import org.mockito.Mock;
+import org.mockito.Mockito;
+import static org.mockito.Mockito.when;
+import org.mockito.junit.jupiter.MockitoExtension;
+import org.springframework.beans.factory.annotation.Value;
+import org.springframework.core.ParameterizedTypeReference;
+import org.springframework.http.HttpEntity;
+import org.springframework.http.HttpHeaders;
+import org.springframework.http.HttpMethod;
+import org.springframework.http.HttpStatus;
+import org.springframework.http.ResponseEntity;
+import org.springframework.test.util.ReflectionTestUtils;
+import org.springframework.web.client.HttpServerErrorException;
+import org.springframework.web.client.RestClientException;
+import org.springframework.web.client.RestTemplate;
 import gr.atc.modapto.dto.AuthenticationResponseDTO;
 import gr.atc.modapto.dto.CredentialsDTO;
 import gr.atc.modapto.dto.UserDTO;
@@ -7,31 +42,6 @@ import gr.atc.modapto.dto.keycloak.ClientRepresentationDTO;
 import gr.atc.modapto.dto.keycloak.RoleRepresentationDTO;
 import gr.atc.modapto.dto.keycloak.UserRepresentationDTO;
 import gr.atc.modapto.exception.CustomExceptions;
-import org.junit.jupiter.api.BeforeEach;
-import org.junit.jupiter.api.DisplayName;
-import org.junit.jupiter.api.Test;
-import org.junit.jupiter.api.extension.ExtendWith;
-import org.mockito.InjectMocks;
-import org.mockito.Mock;
-import org.mockito.Mockito;
-import org.mockito.junit.jupiter.MockitoExtension;
-import org.springframework.beans.factory.annotation.Value;
-import org.springframework.core.ParameterizedTypeReference;
-import org.springframework.http.*;
-import org.springframework.test.util.ReflectionTestUtils;
-import org.springframework.web.client.HttpClientErrorException;
-import org.springframework.web.client.HttpServerErrorException;
-import org.springframework.web.client.RestClientException;
-import org.springframework.web.client.RestTemplate;
-import java.util.Collections;
-import java.util.HashMap;
-import java.util.List;
-import java.util.Map;
-import java.util.concurrent.CompletableFuture;
-
-import static org.junit.jupiter.api.Assertions.*;
-import static org.mockito.ArgumentMatchers.*;
-import static org.mockito.Mockito.*;
 
 @ExtendWith(MockitoExtension.class)
 class UserManagerServiceTests {
@@ -48,11 +58,15 @@ class UserManagerServiceTests {
   @Mock
   private KeycloakSupportService keycloakSupportService;
 
+  @Mock
+  private IEmailService emailService;
+
   @InjectMocks
   private UserManagerService userManagerService;
 
   private CredentialsDTO credentials;
   private UserRepresentationDTO userRepresentation;
+  private UserRepresentationDTO userRepresentationNotActivated;
 
   private static final String MOCK_TOKEN = "mock-token";
   private static final String MOCK_EMAIL = "mockemail@test.com";
@@ -69,14 +83,18 @@ class UserManagerServiceTests {
   void setup() {
     credentials = CredentialsDTO.builder().email(testUserEmail).password(testUserPassword).build();
 
-    userRepresentation = UserRepresentationDTO.builder().id("123").email(MOCK_EMAIL).firstName("Test")
-            .lastName("User").enabled(true).username("TestUser").build();
+    userRepresentation = UserRepresentationDTO.builder().id("123").email(MOCK_EMAIL)
+        .firstName("Test").lastName("User").enabled(true).username("TestUser").build();
+
+    userRepresentationNotActivated = UserRepresentationDTO.builder().id("123").email(MOCK_EMAIL)
+        .firstName("Test").lastName("User").enabled(false).username("TestUser").build();
 
     ReflectionTestUtils.setField(userManagerService, "adminUri", MOCK_ADMIN_URI);
     ReflectionTestUtils.setField(userManagerService, "tokenUri", MOCK_TOKEN_URI);
     ReflectionTestUtils.setField(userManagerService, "clientId", MOCK_CLIENT_ID);
     ReflectionTestUtils.setField(userManagerService, "clientSecret", MOCK_CLIENT_SECRET);
     ReflectionTestUtils.setField(userManagerService, "restTemplate", restTemplate);
+    ReflectionTestUtils.setField(userManagerService, "userPath", "/userPath");
   }
 
   @DisplayName("Authenticate user: Success with credentials")
@@ -117,7 +135,7 @@ class UserManagerServiceTests {
             .thenThrow(new RestClientException("Unable to connect"));
 
     // When - Then
-    assertThrows(CustomExceptions.KeycloakException.class,
+    assertThrows(CustomExceptions.InvalidAuthenticationCredentialsException.class,
         () -> userManagerService.authenticate(credentials, null));
   }
 
@@ -177,22 +195,6 @@ class UserManagerServiceTests {
     assertEquals("User", result.getLastName());
   }
 
-  @DisplayName("Retrieve user by email: HTTP Client Error")
-  @Test
-  void givenEmailAndJwt_whenHttpClientErrorException_thenReturnNull() {
-    // Given
-    String requestUri = MOCK_ADMIN_URI.concat("/users?email=").concat(MOCK_EMAIL);
-
-    // Simulate HTTP client error
-    when(restTemplate.exchange(eq(requestUri), eq(HttpMethod.GET), any(HttpEntity.class),
-        any(ParameterizedTypeReference.class)))
-            .thenThrow(new HttpClientErrorException(HttpStatus.BAD_REQUEST, "Bad Request"));
-
-    // When - Then
-    assertThrows(CustomExceptions.KeycloakException.class,
-        () -> userManagerService.retrieveUserByEmail(MOCK_EMAIL, MOCK_TOKEN));
-  }
-
   @DisplayName("Retrieve user by email: HTTP Server Error")
   @Test
   void givenEmailAndJwt_whenHttpServerErrorException_thenReturnNull() {
@@ -214,26 +216,27 @@ class UserManagerServiceTests {
   @Test
   void givenUserDTO_whenCreateUser_thenReturnUserId() {
     // Given
-    UserDTO userDTO = new UserDTO();
-    userDTO.setEmail(MOCK_EMAIL);
-    userDTO.setFirstName("Test");
-    userDTO.setLastName("User");
+    String expectedUserId = "123";
+    String requestUri = MOCK_ADMIN_URI + "/userPath";
 
-    ResponseEntity<Object> mockResponse = new ResponseEntity<>(null, HttpStatus.CREATED);
-    when(restTemplate.exchange(eq(MOCK_ADMIN_URI + "/users"), eq(HttpMethod.POST),
-        any(HttpEntity.class), eq(Object.class))).thenReturn(mockResponse);
+    UserDTO userDTO =
+        UserDTO.builder().email(MOCK_EMAIL).firstName("Test").lastName("User").build();
 
-    // Mock the Location header
-    HttpHeaders headers = new HttpHeaders();
-    headers.setLocation(java.net.URI.create(MOCK_ADMIN_URI + "/users/123"));
-    ReflectionTestUtils.setField(mockResponse, "headers", headers);
+    // Create response headers with Location
+    HttpHeaders responseHeaders = new HttpHeaders();
+    responseHeaders.setLocation(URI.create(MOCK_ADMIN_URI + "/userPath/" + expectedUserId));
+
+    // Mock the response with exact parameter matching
+    when(restTemplate.exchange(eq(requestUri), eq(HttpMethod.POST), any(HttpEntity.class),
+        Mockito.<ParameterizedTypeReference<Map<String, Object>>>any()))
+            .thenReturn(new ResponseEntity<>(new HashMap<>(), responseHeaders, HttpStatus.CREATED));
 
     // When
-    String result = userManagerService.createUser(userDTO, MOCK_TOKEN);
+    String resultId = userManagerService.createUser(userDTO, MOCK_TOKEN);
 
     // Then
-    assertNotNull(result);
-    assertEquals("123", result);
+    assertNotNull(resultId, "Result ID should not be null");
+    assertEquals(expectedUserId, resultId, "Result ID should match expected ID");
   }
 
   @DisplayName("Activate user: Success")
@@ -241,21 +244,21 @@ class UserManagerServiceTests {
   void givenValidActivationParams_whenActivateUser_thenReturnTrue() {
     // Add Attributes to user repsesentation
     Map<String, List<String>> tempMap = new HashMap<>();
-    userRepresentation.setAttributes(tempMap);
-    userRepresentation.getAttributes().put("activation_token", List.of("mock-token"));
-    userRepresentation.getAttributes().put("activation_expiry", List.of("random-time"));
+    userRepresentationNotActivated.setAttributes(tempMap);
+    userRepresentationNotActivated.getAttributes().put("activation_token", List.of("mock-token"));
+    userRepresentationNotActivated.getAttributes().put("activation_expiry", List.of("random-time"));
 
     // Mock Keycloak Return of Token
     when(keycloakSupportService.retrieveComponentJwtToken()).thenReturn(MOCK_TOKEN);
 
     // Mock user retrieval
-    when(restTemplate.exchange(eq(MOCK_ADMIN_URI + "/users/123"), eq(HttpMethod.GET),
-            any(HttpEntity.class), eq(UserRepresentationDTO.class)))
-            .thenReturn(new ResponseEntity<>(userRepresentation, HttpStatus.OK));
+    when(restTemplate.exchange(eq(MOCK_ADMIN_URI + "/userPath/123"), eq(HttpMethod.GET),
+        any(HttpEntity.class), eq(UserRepresentationDTO.class)))
+            .thenReturn(new ResponseEntity<>(userRepresentationNotActivated, HttpStatus.OK));
 
     // Mock user update
-    when(restTemplate.exchange(eq(MOCK_ADMIN_URI + "/users/123"), eq(HttpMethod.PUT),
-            any(HttpEntity.class), eq(Object.class)))
+    when(restTemplate.exchange(eq(MOCK_ADMIN_URI + "/userPath/123"), eq(HttpMethod.PUT),
+        any(HttpEntity.class), eq(Object.class)))
             .thenReturn(new ResponseEntity<>(null, HttpStatus.NO_CONTENT));
 
     // Use spy service
@@ -264,9 +267,9 @@ class UserManagerServiceTests {
     assertTrue(result);
   }
 
-  @DisplayName("Activate User: Invalid Token - No Token Available")
+  @DisplayName("Activate User: User Already Activated")
   @Test
-  void givenFailedTokenRetrieval_whenActivateUser_thenReturnFalse() {
+  void givenAlreadyActivatedUser_whenActivateUser_thenReturnConflict() {
     // Add Attributes to user repsesentation
     Map<String, List<String>> tempMap = new HashMap<>();
     userRepresentation.setAttributes(tempMap);
@@ -276,13 +279,34 @@ class UserManagerServiceTests {
     when(keycloakSupportService.retrieveComponentJwtToken()).thenReturn(MOCK_TOKEN);
 
     // Mock user retrieval
-    when(restTemplate.exchange(eq(MOCK_ADMIN_URI + "/users/123"), eq(HttpMethod.GET),
-            any(HttpEntity.class), eq(UserRepresentationDTO.class)))
+    when(restTemplate.exchange(eq(MOCK_ADMIN_URI + "/userPath/123"), eq(HttpMethod.GET),
+        any(HttpEntity.class), eq(UserRepresentationDTO.class)))
             .thenReturn(new ResponseEntity<>(userRepresentation, HttpStatus.OK));
 
     // When - Then
-    assertThrows(CustomExceptions.InvalidActivationAttributes.class, () ->
-            userManagerService.activateUser("123", MOCK_TOKEN, "test-password"));
+    assertThrows(CustomExceptions.UserActivateStatusException.class,
+        () -> userManagerService.activateUser("123", MOCK_TOKEN, "test-password"));
+  }
+
+  @DisplayName("Activate User: Missing activation token or activation expiry")
+  @Test
+  void givenActivatedUser_whenActivateUser_thenReturnErrorWithActivationProcess() {
+    // Add Attributes to user repsesentation
+    Map<String, List<String>> tempMap = new HashMap<>();
+    userRepresentationNotActivated.setAttributes(tempMap);
+    userRepresentationNotActivated.getAttributes().put("activation_expiry", List.of("random-time"));
+
+    // Mock Keycloak Return of Token
+    when(keycloakSupportService.retrieveComponentJwtToken()).thenReturn(MOCK_TOKEN);
+
+    // Mock user retrieval
+    when(restTemplate.exchange(eq(MOCK_ADMIN_URI + "/userPath/123"), eq(HttpMethod.GET),
+        any(HttpEntity.class), eq(UserRepresentationDTO.class)))
+            .thenReturn(new ResponseEntity<>(userRepresentationNotActivated, HttpStatus.OK));
+
+    // When - Then
+    assertThrows(CustomExceptions.InvalidActivationAttributesException.class,
+        () -> userManagerService.activateUser("123", MOCK_TOKEN, "test-password"));
   }
 
   @DisplayName("Activate User: User Not Found")
@@ -293,12 +317,13 @@ class UserManagerServiceTests {
     when(keycloakSupportService.retrieveComponentJwtToken()).thenReturn(MOCK_TOKEN);
 
     // When
-    when(restTemplate.exchange(eq(MOCK_ADMIN_URI + "/users/123"), eq(HttpMethod.GET),
-            any(HttpEntity.class), eq(UserRepresentationDTO.class)))
+    when(restTemplate.exchange(eq(MOCK_ADMIN_URI + "/userPath/123"), eq(HttpMethod.GET),
+        any(HttpEntity.class), eq(UserRepresentationDTO.class)))
             .thenReturn(new ResponseEntity<>(null, HttpStatus.NOT_FOUND));
 
     // When
-    boolean result = userManagerService.activateUser("123", "mock-activation-token", "test-password");
+    boolean result =
+        userManagerService.activateUser("123", "mock-activation-token", "test-password");
 
     // Then
     assertFalse(result);
@@ -315,16 +340,16 @@ class UserManagerServiceTests {
 
     String userId = "123";
 
-    when(restTemplate.exchange(eq(MOCK_ADMIN_URI + "/users/" + userId), eq(HttpMethod.GET),
-            any(HttpEntity.class), eq(UserRepresentationDTO.class)))
+    when(restTemplate.exchange(eq(MOCK_ADMIN_URI + "/userPath/" + userId), eq(HttpMethod.GET),
+        any(HttpEntity.class), eq(UserRepresentationDTO.class)))
             .thenReturn(new ResponseEntity<>(userRepresentation, HttpStatus.OK));
 
-    when(restTemplate.exchange(eq(MOCK_ADMIN_URI + "/users/" + userId), eq(HttpMethod.PUT),
-            any(HttpEntity.class), eq(Object.class)))
+    when(restTemplate.exchange(eq(MOCK_ADMIN_URI + "/userPath/" + userId), eq(HttpMethod.PUT),
+        any(HttpEntity.class), eq(Object.class)))
             .thenReturn(new ResponseEntity<>(null, HttpStatus.NO_CONTENT));
 
     // When
-    boolean result = userManagerService.updateUser(userDTO, null, userId, MOCK_TOKEN);
+    boolean result = userManagerService.updateUser(userDTO, userId, MOCK_TOKEN);
 
     // Then
     assertTrue(result);
@@ -336,7 +361,7 @@ class UserManagerServiceTests {
     // Given
     String userId = "123";
 
-    when(restTemplate.exchange(eq(MOCK_ADMIN_URI + "/users/" + userId), eq(HttpMethod.DELETE),
+    when(restTemplate.exchange(eq(MOCK_ADMIN_URI + "/userPath/" + userId), eq(HttpMethod.DELETE),
         any(HttpEntity.class), any(ParameterizedTypeReference.class)))
             .thenReturn(new ResponseEntity<>(null, HttpStatus.NO_CONTENT));
 
@@ -354,7 +379,7 @@ class UserManagerServiceTests {
     String userId = "123";
     String newPassword = "newPassword";
 
-    when(restTemplate.exchange(eq(MOCK_ADMIN_URI + "/users/" + userId + "/reset-password"),
+    when(restTemplate.exchange(eq(MOCK_ADMIN_URI + "/userPath/" + userId + "/reset-password"),
         eq(HttpMethod.PUT), any(HttpEntity.class), eq(Object.class)))
             .thenReturn(new ResponseEntity<>(null, HttpStatus.NO_CONTENT));
 
@@ -371,7 +396,7 @@ class UserManagerServiceTests {
     // Given
     String userId = "123";
 
-    when(restTemplate.exchange(eq(MOCK_ADMIN_URI + "/users/" + userId + "/logout"),
+    when(restTemplate.exchange(eq(MOCK_ADMIN_URI + "/userPath/" + userId + "/logout"),
         eq(HttpMethod.POST), any(HttpEntity.class), eq(Object.class)))
             .thenReturn(new ResponseEntity<>(null, HttpStatus.NO_CONTENT));
 
@@ -398,7 +423,7 @@ class UserManagerServiceTests {
         any(HttpEntity.class), any(ParameterizedTypeReference.class)))
             .thenReturn(new ResponseEntity<>(List.of(roleRepresentationDTO), HttpStatus.OK));
 
-    when(restTemplate.exchange(eq(MOCK_ADMIN_URI + "/users/" + userId + "/role-mappings/realm"),
+    when(restTemplate.exchange(eq(MOCK_ADMIN_URI + "/userPath/" + userId + "/role-mappings/realm"),
         eq(HttpMethod.POST), any(HttpEntity.class), eq(Object.class)))
             .thenReturn(new ResponseEntity<>(null, HttpStatus.NO_CONTENT));
 
@@ -452,14 +477,15 @@ class UserManagerServiceTests {
   }
 
   @DisplayName("Fetch user by email: Success")
-  @SuppressWarnings("unchecked")
   @Test
   void givenEmailAndJwt_whenFetchUserByEmail_thenReturnUserRepresentation() {
     // Given
     List<UserRepresentationDTO> mockResponseBody = List.of(userRepresentation);
 
+    // Mock the REST call
     when(restTemplate.exchange(eq(MOCK_ADMIN_URI + "/users?email=" + MOCK_EMAIL),
-        eq(HttpMethod.GET), any(HttpEntity.class), any(ParameterizedTypeReference.class)))
+        eq(HttpMethod.GET), any(HttpEntity.class),
+        Mockito.<ParameterizedTypeReference<List<UserRepresentationDTO>>>any()))
             .thenReturn(new ResponseEntity<>(mockResponseBody, HttpStatus.OK));
 
     // When
@@ -476,7 +502,7 @@ class UserManagerServiceTests {
   @Test
   void givenUserIdAndJwt_whenFetchUserById_thenReturnUserRepresentation() {
     // Given
-    when(restTemplate.exchange(eq(MOCK_ADMIN_URI + "/users/" + "123"), eq(HttpMethod.GET),
+    when(restTemplate.exchange(eq(MOCK_ADMIN_URI + "/userPath/" + "123"), eq(HttpMethod.GET),
         any(HttpEntity.class), eq(UserRepresentationDTO.class)))
             .thenReturn(new ResponseEntity<>(userRepresentation, HttpStatus.OK));
 
@@ -497,7 +523,7 @@ class UserManagerServiceTests {
     // Given
     List<UserRepresentationDTO> mockResponseBody = List.of(userRepresentation);
 
-    when(restTemplate.exchange(eq(MOCK_ADMIN_URI + "/users"), eq(HttpMethod.GET),
+    when(restTemplate.exchange(eq(MOCK_ADMIN_URI + "/userPath"), eq(HttpMethod.GET),
         any(HttpEntity.class), any(ParameterizedTypeReference.class)))
             .thenReturn(new ResponseEntity<>(mockResponseBody, HttpStatus.OK));
 
@@ -517,9 +543,8 @@ class UserManagerServiceTests {
   @Test
   void givenValidRoleAndJwt_whenFetchUsersByRole_thenReturnUserDTOList() {
     // Given
-    String clientIdRequestUri = MOCK_ADMIN_URI + "/clients?clientId=" + MOCK_CLIENT_ID;
     String fetchUsersRequestUri =
-        MOCK_ADMIN_URI + "/clients/" + MOCK_CLIENT_ID + "/roles/OPERATOR/users";
+        MOCK_ADMIN_URI + "/clients/" + MOCK_CLIENT_ID + "/roles/OPERATOR/userPath";
 
     // Mock the response for finding the client ID
     when(keycloakSupportService.getClientId()).thenReturn(MOCK_CLIENT_ID);
@@ -546,9 +571,8 @@ class UserManagerServiceTests {
   @Test
   void givenValidRoleAndJwt_whenFetchUsersByRoleReturnsEmpty_thenReturnEmptyList() {
     // Given
-    String clientIdRequestUri = MOCK_ADMIN_URI + "/clients?clientId=" + MOCK_CLIENT_ID;
     String fetchUsersRequestUri =
-        MOCK_ADMIN_URI + "/clients/" + MOCK_CLIENT_ID + "/roles/OPERATOR/users";
+        MOCK_ADMIN_URI + "/clients/" + MOCK_CLIENT_ID + "/roles/OPERATOR/userPath";
 
     // Mock the response for finding the client ID
     when(keycloakSupportService.getClientId()).thenReturn(MOCK_CLIENT_ID);
@@ -568,6 +592,143 @@ class UserManagerServiceTests {
     // Then
     assertNotNull(result);
     assertTrue(result.isEmpty());
+  }
+
+  @DisplayName("Forgot Password: User Not Found")
+  @Test
+  void givenInvalidEmail_whenForgotPassword_thenThrowDataRetrievalException() {
+    // Given
+    String email = "nonexistent@test.com";
+
+    // Mock Keycloak Return of Token
+    when(keycloakSupportService.retrieveComponentJwtToken()).thenReturn(MOCK_TOKEN);
+
+    // Mock user retrieval by email returning empty list
+    when(restTemplate.exchange(eq(MOCK_ADMIN_URI + "/users?email=" + email), eq(HttpMethod.GET),
+        any(HttpEntity.class), any(ParameterizedTypeReference.class)))
+            .thenReturn(new ResponseEntity<>(Collections.emptyList(), HttpStatus.OK));
+
+    // When & Then
+    assertThrows(CustomExceptions.DataRetrievalException.class,
+        () -> userManagerService.forgotPassword(email));
+  }
+
+  @DisplayName("Forgot Password: User Not Activated")
+  @Test
+  void givenNonActivatedUserEmail_whenForgotPassword_thenThrowUserActivateStatusException() {
+    // Given
+    String email = "inactive@test.com";
+
+    // Mock Keycloak Return of Token
+    when(keycloakSupportService.retrieveComponentJwtToken()).thenReturn(MOCK_TOKEN);
+
+    // Mock user retrieval by email returning inactive user
+    when(restTemplate.exchange(eq(MOCK_ADMIN_URI + "/users?email=" + email), eq(HttpMethod.GET),
+        any(HttpEntity.class), any(ParameterizedTypeReference.class))).thenReturn(
+            new ResponseEntity<>(List.of(userRepresentationNotActivated), HttpStatus.OK));
+
+    // When & Then
+    assertThrows(CustomExceptions.UserActivateStatusException.class,
+        () -> userManagerService.forgotPassword(email));
+  }
+
+  @DisplayName("Reset Password: Success")
+  @Test
+  void givenValidResetTokenAndPassword_whenResetPassword_thenReturnTrue() {
+    // Given
+    String userId = "123";
+    String resetToken = "valid-reset-token";
+    String newPassword = "NewPassword123@";
+    Map<String, List<String>> attributes = new HashMap<>();
+    attributes.put("reset_token", List.of(resetToken));
+    userRepresentation.setAttributes(attributes);
+
+    // Mock Keycloak Return of Token
+    when(keycloakSupportService.retrieveComponentJwtToken()).thenReturn(MOCK_TOKEN);
+
+    // Mock user retrieval
+    when(restTemplate.exchange(eq(MOCK_ADMIN_URI + "/userPath/" + userId), eq(HttpMethod.GET),
+        any(HttpEntity.class), eq(UserRepresentationDTO.class)))
+            .thenReturn(new ResponseEntity<>(userRepresentation, HttpStatus.OK));
+
+    // Mock user update
+    when(restTemplate.exchange(eq(MOCK_ADMIN_URI + "/userPath/" + userId), eq(HttpMethod.PUT),
+        any(HttpEntity.class), eq(Object.class)))
+            .thenReturn(new ResponseEntity<>(null, HttpStatus.NO_CONTENT));
+
+    // When
+    boolean result = userManagerService.resetPassword(userId, resetToken, newPassword);
+
+    // Then
+    assertTrue(result);
+  }
+
+  @DisplayName("Reset Password: Invalid Reset Token")
+  @Test
+  void givenInvalidResetToken_whenResetPassword_thenThrowInvalidResetTokenAttributesException() {
+    // Given
+    String userId = "123";
+    String invalidResetToken = "invalid-token";
+    String newPassword = "NewPassword123@";
+    Map<String, List<String>> attributes = new HashMap<>();
+    attributes.put("reset_token", List.of("different-token"));
+    userRepresentation.setAttributes(attributes);
+
+    // Mock Keycloak Return of Token
+    when(keycloakSupportService.retrieveComponentJwtToken()).thenReturn(MOCK_TOKEN);
+
+    // Mock user retrieval
+    when(restTemplate.exchange(eq(MOCK_ADMIN_URI + "/userPath/" + userId), eq(HttpMethod.GET),
+        any(HttpEntity.class), eq(UserRepresentationDTO.class)))
+            .thenReturn(new ResponseEntity<>(userRepresentation, HttpStatus.OK));
+
+    // When & Then
+    assertThrows(CustomExceptions.InvalidResetTokenAttributesException.class,
+        () -> userManagerService.resetPassword(userId, invalidResetToken, newPassword));
+  }
+
+  @DisplayName("Reset Password: User Not Activated")
+  @Test
+  void givenNonActivatedUser_whenResetPassword_thenThrowUserActivateStatusException() {
+    // Given
+    String userId = "123";
+    String resetToken = "valid-reset-token";
+    String newPassword = "NewPassword123@";
+
+    // Mock Keycloak Return of Token
+    when(keycloakSupportService.retrieveComponentJwtToken()).thenReturn(MOCK_TOKEN);
+
+    // Mock user retrieval returning inactive user
+    when(restTemplate.exchange(eq(MOCK_ADMIN_URI + "/userPath/" + userId), eq(HttpMethod.GET),
+        any(HttpEntity.class), eq(UserRepresentationDTO.class)))
+            .thenReturn(new ResponseEntity<>(userRepresentationNotActivated, HttpStatus.OK));
+
+    // When & Then
+    assertThrows(CustomExceptions.UserActivateStatusException.class,
+        () -> userManagerService.resetPassword(userId, resetToken, newPassword));
+  }
+
+  @DisplayName("Reset Password: User Not Found")
+  @Test
+  void givenNonExistentUser_whenResetPassword_thenReturnFalse() {
+    // Given
+    String userId = "nonexistent";
+    String resetToken = "valid-reset-token";
+    String newPassword = "NewPassword123@";
+
+    // Mock Keycloak Return of Token
+    when(keycloakSupportService.retrieveComponentJwtToken()).thenReturn(MOCK_TOKEN);
+
+    // Mock user retrieval returning null
+    when(restTemplate.exchange(eq(MOCK_ADMIN_URI + "/userPath/" + userId), eq(HttpMethod.GET),
+        any(HttpEntity.class), eq(UserRepresentationDTO.class)))
+            .thenReturn(new ResponseEntity<>(null, HttpStatus.NOT_FOUND));
+
+    // When
+    boolean result = userManagerService.resetPassword(userId, resetToken, newPassword);
+
+    // Then
+    assertFalse(result);
   }
 }
 

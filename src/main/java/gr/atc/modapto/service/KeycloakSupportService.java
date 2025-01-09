@@ -1,13 +1,15 @@
 package gr.atc.modapto.service;
 
-import gr.atc.modapto.dto.keycloak.ClientDTO;
-import gr.atc.modapto.dto.keycloak.GroupDTO;
-import gr.atc.modapto.exception.CustomExceptions;
-import jakarta.annotation.PostConstruct;
-import lombok.extern.slf4j.Slf4j;
+import java.util.List;
+import java.util.Map;
+import java.util.Optional;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.core.ParameterizedTypeReference;
-import org.springframework.http.*;
+import org.springframework.http.HttpEntity;
+import org.springframework.http.HttpHeaders;
+import org.springframework.http.HttpMethod;
+import org.springframework.http.MediaType;
+import org.springframework.http.ResponseEntity;
 import org.springframework.scheduling.annotation.Scheduled;
 import org.springframework.stereotype.Service;
 import org.springframework.util.LinkedMultiValueMap;
@@ -17,8 +19,14 @@ import org.springframework.web.client.HttpServerErrorException;
 import org.springframework.web.client.RestClientException;
 import org.springframework.web.client.RestTemplate;
 
-import java.util.List;
-import java.util.Map;
+import gr.atc.modapto.dto.keycloak.ClientDTO;
+import gr.atc.modapto.dto.keycloak.GroupDTO;
+import gr.atc.modapto.dto.keycloak.RoleRepresentationDTO;
+import gr.atc.modapto.exception.CustomExceptions;
+import gr.atc.modapto.exception.CustomExceptions.DataRetrievalException;
+import gr.atc.modapto.exception.CustomExceptions.KeycloakException;
+import jakarta.annotation.PostConstruct;
+import lombok.extern.slf4j.Slf4j;
 
 /**
  * We utilize this component to include some common functionalities for the Keycloak Requests
@@ -46,6 +54,11 @@ public class KeycloakSupportService {
     private static final String GRANT_TYPE = "grant_type";
     private static final String CLIENT_ID = "client_id";
     private static final String CLIENT_SECRET = "client_secret";
+    private static final String ROLE_NOT_FOUND_MESSAGE = "User Role not found in Keycloak";
+    private static final String CLIENT_NOT_FOUND_MESSAGE = "Client not found in Keycloak";
+    private static final String GROUP_NOT_FOUND_MESSAGE = "Pilot Code not found in Keycloak";
+    private static final String ERROR_FIELD = "errorMessage";
+
 
     // Store the clientId as variable and update it daily
     private String cachedClientId;
@@ -133,20 +146,25 @@ public class KeycloakSupportService {
                     new ParameterizedTypeReference<>() {}
             );
 
-            // Valid Resposne
-            if (response.getStatusCode().is2xxSuccessful() && response.getBody() != null )
-                return response.getBody().stream()
-                        .filter(client -> client.getClientId().equals(clientName))
-                        .map(ClientDTO::getId)
-                        .findFirst()
-                        .orElse(null);
-
-
-            // Invalid Response return null
-            return null;
-        } catch (HttpClientErrorException | HttpServerErrorException e) {
-            log.error("HTTP error during retrieval of client ID: {}", e.getMessage(), e);
-            throw new CustomExceptions.KeycloakException("HTTP error during retrieval of client ID", e);
+            // Parse response
+            return Optional.ofNullable(response)
+                .filter(resp -> resp.getStatusCode().is2xxSuccessful())
+                .map(ResponseEntity::getBody)
+                .map(body -> body.stream()
+                    .filter(client -> client.getClientId().equals(clientName))
+                    .map(ClientDTO::getId)
+                    .findFirst()
+                    .orElse(null))
+                .orElse(null);
+        } catch (HttpServerErrorException e) {
+            log.error("HTTP server error during retrieval of client ID: {}", e.getMessage(), e);
+            throw new CustomExceptions.KeycloakException("HTTP server error during retrieval of client ID", e);
+        } catch (HttpClientErrorException e) {
+          Map<String, Object> responseBody = e.getResponseBodyAs(new ParameterizedTypeReference<Map<String, Object>>() {});
+          if (responseBody != null && responseBody.containsKey(ERROR_FIELD)) {
+            throw new DataRetrievalException(responseBody.get(ERROR_FIELD).toString());
+          }
+          throw new DataRetrievalException(CLIENT_NOT_FOUND_MESSAGE);
         } catch (RestClientException e) {
             log.error("Error during retrieval of client ID: {}", e.getMessage(), e);
             throw new CustomExceptions.KeycloakException("Error during retrieval of client ID", e);
@@ -177,22 +195,75 @@ public class KeycloakSupportService {
                     new ParameterizedTypeReference<>() {}
             );
 
-            // Valid Resposne
-            if (response.getStatusCode().is2xxSuccessful() && response.getBody() != null )
-                return response.getBody().stream()
-                        .filter(group -> group.getName().equals(pilot))
-                        .map(GroupDTO::getId)
-                        .findFirst()
-                        .orElse(null);
-
-            // Invalid Response return null
-            return null;
-        } catch (HttpClientErrorException | HttpServerErrorException e) {
-            log.error("HTTP error during retrieval of group ID: {}", e.getMessage(), e);
-            throw new CustomExceptions.KeycloakException("HTTP error during retrieval of client ID", e);
+           // Parse response
+           return Optional.ofNullable(response)
+              .filter(resp -> resp.getStatusCode().is2xxSuccessful())
+              .map(ResponseEntity::getBody)
+              .map(body -> body.stream()
+                    .filter(group -> group.getName().equals(pilot))
+                    .map(GroupDTO::getId)
+                    .findFirst()
+                      .orElse(null))
+              .orElse(null);
+        } catch (HttpServerErrorException e) {
+            log.error("HTTP server error during retrieval of group ID: {}", e.getMessage(), e);
+            throw new CustomExceptions.KeycloakException("HTTP server error during retrieval of client ID", e);
+        } catch (HttpClientErrorException e) {
+          Map<String, Object> responseBody = e.getResponseBodyAs(new ParameterizedTypeReference<Map<String, Object>>() {});
+          if (responseBody != null && responseBody.containsKey(ERROR_FIELD)) {
+            throw new DataRetrievalException(responseBody.get(ERROR_FIELD).toString());
+          }
+          throw new DataRetrievalException(GROUP_NOT_FOUND_MESSAGE);
         } catch (RestClientException e) {
             log.error("Error during retrieval of group ID: {}", e.getMessage(), e);
             throw new CustomExceptions.KeycloakException("Error during retrieval of client ID", e);
+        }
+    }
+
+    /**
+     * Find a Role Representation By Name
+     *
+     * @param userRole : User role to retrieve
+     * @param token : JWT Token value
+     * @return RoleRepresentationDTO : Role Representation
+     */
+    public RoleRepresentationDTO findRoleRepresentationByName(String userRole, String clientId, String token) {
+        // Set Headers
+        HttpHeaders headers = new HttpHeaders();
+        headers.setBearerAuth(token);
+        headers.setContentType(MediaType.APPLICATION_JSON);
+
+        HttpEntity<Void> entity = new HttpEntity<>(headers);
+
+        // Create the URI and make the POST request
+        StringBuilder requestUri = new StringBuilder();
+        requestUri.append(adminUri).append("/clients/").append(clientId).append("/roles/").append(userRole);
+        try{
+            ResponseEntity<RoleRepresentationDTO> response = restTemplate.exchange(
+                    requestUri.toString(),
+                    HttpMethod.GET,
+                    entity,
+                    new ParameterizedTypeReference<>() {}
+            );
+
+            // Locate and return the Role Representation
+            if (response.getStatusCode().is2xxSuccessful() && response.getBody() != null )
+                return response.getBody();
+
+            // Invalid Response return null
+            return null;
+        } catch (HttpServerErrorException e) {
+            log.error("HTTP server error during locating role information: {}", e.getMessage(), e);
+            throw new KeycloakException("HTTP server error during locating role information", e);
+        } catch (HttpClientErrorException e) {
+          Map<String, Object> responseBody = e.getResponseBodyAs(new ParameterizedTypeReference<Map<String, Object>>() {});
+          if (responseBody != null && responseBody.containsKey(ERROR_FIELD)) {
+            throw new DataRetrievalException(responseBody.get(ERROR_FIELD).toString());
+          }
+          throw new DataRetrievalException(ROLE_NOT_FOUND_MESSAGE);
+        } catch (RestClientException e) {
+            log.error("Error during locating role information: {}", e.getMessage(), e);
+            throw new KeycloakException("Error during locating role information", e);
         }
     }
 }

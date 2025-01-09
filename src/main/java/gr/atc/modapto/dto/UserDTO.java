@@ -9,6 +9,7 @@ import gr.atc.modapto.validation.ValidPassword;
 import gr.atc.modapto.validation.ValidPilotCode;
 import gr.atc.modapto.validation.ValidPilotRole;
 import jakarta.validation.constraints.Email;
+import jakarta.validation.constraints.Null;
 import lombok.AllArgsConstructor;
 import lombok.Builder;
 import lombok.Data;
@@ -52,10 +53,19 @@ public class UserDTO {
     @JsonProperty("pilotCode")
     private PilotCode pilotCode;
 
+    @Null
     @JsonProperty("activationToken")
     private String activationToken;
 
+    @Null
     @JsonProperty("activationExpiry")
     private String activationExpiry;
 
+    @Null
+    @JsonProperty("resetToken")
+    private String resetToken;
+
+    @Null
+    @JsonProperty("tokenFlag")
+    private boolean tokenFlagRaised;
 }

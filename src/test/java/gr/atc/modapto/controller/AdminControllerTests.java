@@ -155,7 +155,7 @@ class AdminControllerTests {
     void givenValidJwtAndNewRole_whenCreateNewUserRole_thenReturnSuccess() throws Exception {
         // Given
         UserRoleDTO role = UserRoleDTO.builder()
-                .name("Test Role")
+                .name("TestRole")
                 .pilotRole(PilotRole.ADMIN)
                 .pilotCode(PilotCode.SEW)
                 .build();
@@ -183,7 +183,7 @@ class AdminControllerTests {
     void givenValidJwtAndNewRole_whenCreateNewUserRole_thenReturnUnauthorizedForAdminInDifferentPilots() throws Exception {
         // Given
         UserRoleDTO role = UserRoleDTO.builder()
-                .name("Test Role")
+                .name("TestRole")
                 .pilotRole(PilotRole.ADMIN)
                 .pilotCode(PilotCode.CRF)
                 .build();
@@ -206,12 +206,40 @@ class AdminControllerTests {
                 .andExpect(jsonPath("$.message", is("Unauthorized action")));
     }
 
+    @DisplayName("Create new Role: Invalid User Role with spaces")
+    @Test
+    void givenValidJwtAndNewRoleWithSpace_whenCreateNewUserRole_thenReturnBadRequest() throws Exception {
+        // Given
+        UserRoleDTO role = UserRoleDTO.builder()
+                .name("Test Role")
+                .pilotRole(PilotRole.ADMIN)
+                .pilotCode(PilotCode.CRF)
+                .build();
+
+        given(adminService.createUserRole(anyString(), any(UserRoleDTO.class))).willReturn(true);
+
+        // Mock JWT authentication
+        JwtAuthenticationToken jwtAuthenticationToken = new JwtAuthenticationToken(jwt, List.of(new SimpleGrantedAuthority("ROLE_ADMIN")));
+        SecurityContextHolder.getContext().setAuthentication(jwtAuthenticationToken);
+
+        // When
+        ResultActions response = mockMvc.perform(MockMvcRequestBuilders.post("/api/admin/roles/create")
+                .contentType(MediaType.APPLICATION_JSON)
+                .with(csrf())
+                .content(objectMapper.writeValueAsString(role)));
+
+        // Then
+        response.andExpect(status().isBadRequest())
+                .andExpect(jsonPath("$.success", is(false)))
+                .andExpect(jsonPath("$.message", is("Invalid input data")));
+    }
+
     @DisplayName("Create new Role: Internal Error")
     @Test
     void givenValidJwtAndNewRole_whenCreateNewUserRole_thenReturnInternalError() throws Exception {
         // Given
         UserRoleDTO role = UserRoleDTO.builder()
-                .name("Test Role")
+                .name("TestRole")
                 .pilotRole(PilotRole.ADMIN)
                 .pilotCode(PilotCode.SEW)
                 .build();
@@ -239,7 +267,7 @@ class AdminControllerTests {
     void givenValidJwtAndNewRoleWithMissingFields_whenCreateNewUserRole_thenReturnBadRequest() throws Exception {
         // Given
         UserRoleDTO role = UserRoleDTO.builder()
-                .name("Test Role")
+                .name("TestRole")
                 .pilotRole(PilotRole.ADMIN)
                 .build();
 
@@ -257,7 +285,7 @@ class AdminControllerTests {
         // Then
         response.andExpect(status().isBadRequest())
                 .andExpect(jsonPath("$.success", is(false)))
-                .andExpect(jsonPath("$.message", is("All fields of roles must be inserted (Name, Pilot Code, Pilot Type)")));
+                .andExpect(jsonPath("$.message", is("Missing fields")));
     }
 
     @DisplayName("Delete User Role: Success")

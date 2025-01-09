@@ -16,15 +16,33 @@ public class CustomExceptions {
         }
     }
 
-    public static class InvalidActivationAttributes extends RuntimeException{
-        public InvalidActivationAttributes(String message) {
+    public static class InvalidActivationAttributesException extends RuntimeException{
+        public InvalidActivationAttributesException(String message) {
             super(message);
         }
     }
 
-    public static class InvalidAuthenticationCredentials extends RuntimeException{
-        public InvalidAuthenticationCredentials(String message) {
+    public static class InvalidResetTokenAttributesException extends RuntimeException{
+        public InvalidResetTokenAttributesException(String message) {
             super(message);
         }
     }
+
+    public static class InvalidAuthenticationCredentialsException extends RuntimeException{
+        public InvalidAuthenticationCredentialsException(String message) {
+            super(message);
+        }
+    }
+
+    public static class ResourceAlreadyExistsException extends RuntimeException{
+        public ResourceAlreadyExistsException(String message) {
+            super(message);
+        }
+    }
+
+    public static class UserActivateStatusException extends RuntimeException{
+      public UserActivateStatusException(String message) {
+          super(message);
+      }
+  }
 }

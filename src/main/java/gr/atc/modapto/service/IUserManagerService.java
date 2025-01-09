@@ -13,7 +13,7 @@ public interface IUserManagerService {
 
   String createUser(UserDTO userDTO, String token);
 
-  boolean updateUser(UserDTO userDTO, UserRepresentationDTO existingUser, String userId, String token);
+  boolean updateUser(UserDTO userDTO, String userId, String token);
 
   List<UserDTO> fetchUsers(String token, String pilot);
 
@@ -31,6 +31,8 @@ public interface IUserManagerService {
 
   CompletableFuture<Void> assignRealmManagementRoles(String userRole, String userId, String token);
 
+  CompletableFuture<Void> assignClientRole(String userRole, String userId, String token);
+
   CompletableFuture<Void> logoutUser(String userId, String token);
 
   List<UserDTO> fetchUsersByRole(String userRole, String tokenValue);
@@ -38,4 +40,8 @@ public interface IUserManagerService {
   List<UserDTO> fetchUsersByPilotCode(String pilotCode, String tokenValue);
 
   boolean activateUser(String userId, String activationToken, String password);
+
+  void forgotPassword(String email);
+
+  boolean resetPassword(String userId, String resetToken, String password);
 }

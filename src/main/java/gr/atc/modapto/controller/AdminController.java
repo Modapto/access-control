@@ -2,10 +2,6 @@ package gr.atc.modapto.controller;
 
 import java.util.List;
 
-import gr.atc.modapto.dto.UserDTO;
-import gr.atc.modapto.service.IAdminService;
-import gr.atc.modapto.validation.ValidPilotCode;
-import io.swagger.v3.oas.annotations.security.SecurityRequirement;
 import org.apache.commons.lang3.StringUtils;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
@@ -21,14 +17,18 @@ import org.springframework.web.bind.annotation.RequestBody;
 import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RestController;
 
+import gr.atc.modapto.dto.UserDTO;
 import gr.atc.modapto.dto.UserRoleDTO;
 import gr.atc.modapto.enums.PilotRole;
+import gr.atc.modapto.service.IAdminService;
 import gr.atc.modapto.util.JwtUtils;
+import gr.atc.modapto.validation.ValidPilotCode;
 import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.media.Content;
 import io.swagger.v3.oas.annotations.media.Schema;
 import io.swagger.v3.oas.annotations.responses.ApiResponse;
 import io.swagger.v3.oas.annotations.responses.ApiResponses;
+import io.swagger.v3.oas.annotations.security.SecurityRequirement;
 import lombok.AllArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 
@@ -88,14 +88,27 @@ public class AdminController {
     @ApiResponses(value = {
             @ApiResponse(responseCode = "201", description = "User role created successfully"),
             @ApiResponse(responseCode = "400", description = "Invalid request: either credentials or token must be provided!"),
+            @ApiResponse(responseCode = "400", description = "Invalid input data"),
+            @ApiResponse(responseCode = "400", description = "Missing fields"),
             @ApiResponse(responseCode = "401", description = "Authentication process failed!"),
             @ApiResponse(responseCode = "403", description = "Invalid authorization parameters. Check JWT or CSRF Token"),
             @ApiResponse(responseCode = "403", description = "Token inserted is invalid. It does not contain any information about the user role or the pilot"),
+            @ApiResponse(responseCode = "409", description = "User role already exists in Keycloak"),
             @ApiResponse(responseCode = "500", description = "Unable to create and store the new role")
     })
     @PreAuthorize("hasAnyAuthority('ROLE_SUPER_ADMIN', 'ROLE_ADMIN')")
     @PostMapping("/roles/create")
     public ResponseEntity<BaseResponse<Void>> createNewUserRole(@AuthenticationPrincipal Jwt jwt, @RequestBody UserRoleDTO userRole) {
+
+        // Validate that all fields are provided as body
+        if (userRole == null || userRole.getPilotRole() == null || userRole.getName() == null || userRole.getPilotCode() == null)
+          return new ResponseEntity<>(BaseResponse.error("Missing fields", "All fields of roles must be inserted (Name, Pilot Code, Pilot Type)"), HttpStatus.BAD_REQUEST);
+
+        // Ensure data don't contain spaces
+        if (userRole.getName().contains(" "))
+          return new ResponseEntity<>(BaseResponse.error("Invalid input data","Username or User Role cannot contain spaces!"),
+                HttpStatus.BAD_REQUEST);
+      
         // Validate token proper format
         String role = JwtUtils.extractPilotRole(jwt);
         String pilot = JwtUtils.extractPilotCode(jwt);
@@ -103,10 +116,6 @@ public class AdminController {
         // Check if JWT contains the proper information
         if (StringUtils.isAnyBlank(role, pilot))
             return new ResponseEntity<>(BaseResponse.error(INVALID_TOKEN), HttpStatus.FORBIDDEN);
-
-        // Validate that all fields are provided as body
-        if (userRole == null || userRole.getPilotRole() == null || userRole.getName() == null || userRole.getPilotCode() == null)
-            return new ResponseEntity<>(BaseResponse.error("All fields of roles must be inserted (Name, Pilot Code, Pilot Type)", "Missing fields"), HttpStatus.BAD_REQUEST);
 
         // Convert the Name to Upper Case if not already defined
         userRole.setName(userRole.getName().toUpperCase());

@@ -2,6 +2,8 @@ package gr.atc.modapto.service;
 
 import java.util.Collections;
 import java.util.List;
+import java.util.Map;
+import java.util.Optional;
 
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.core.ParameterizedTypeReference;
@@ -24,14 +26,23 @@ import gr.atc.modapto.dto.keycloak.RoleRepresentationDTO;
 import gr.atc.modapto.dto.keycloak.UserRepresentationDTO;
 import gr.atc.modapto.exception.CustomExceptions.DataRetrievalException;
 import gr.atc.modapto.exception.CustomExceptions.KeycloakException;
+import gr.atc.modapto.exception.CustomExceptions.ResourceAlreadyExistsException;
 import lombok.extern.slf4j.Slf4j;
 
 @Service
 @Slf4j
 public class AdminService implements IAdminService {
-
     @Value("${keycloak.admin.uri}")
     private String adminUri;
+
+    @Value("${keycloak.api.client-path:/clients}")
+    private String clientPath;
+    
+    @Value("${keycloak.api.role-path:/roles}")
+    private String rolePath;
+
+    @Value("${keycloak.api.group-path:/groups}")
+    private String groupPath;
 
     private final RestTemplate restTemplate = new RestTemplate();
 
@@ -43,6 +54,7 @@ public class AdminService implements IAdminService {
     private static final String ROLE_NOT_FOUND_MESSAGE = "User Role not found in Keycloak";
     private static final String CLIENT_NOT_FOUND_MESSAGE = "Client not found in Keycloak";
     private static final String GROUP_NOT_FOUND_MESSAGE = "Group not found in Keycloak";
+    private static final String ERROR_FIELD = "errorMessage";
 
     public AdminService(KeycloakSupportService keycloakSupportService){
         this.keycloakSupportService = keycloakSupportService;
@@ -64,7 +76,7 @@ public class AdminService implements IAdminService {
 
             HttpEntity<Void> entity = new HttpEntity<>(headers);
 
-            String requestUri = adminUri.concat("/roles");
+            String requestUri = adminUri.concat(rolePath);
             ResponseEntity<List<RealmRoleDTO>> response = restTemplate.exchange(
                     requestUri,
                     HttpMethod.GET,
@@ -74,15 +86,16 @@ public class AdminService implements IAdminService {
 
             // Select the appropriate list according to whether pilot code was inserted or not
             List<String> excludedList = isSuperAdmin ? SUPER_ADMIN_EXCLUDED_ROLES : ADMIN_EXCLUDED_ROLES;
-            // Valid Resposne
-            if (response.getStatusCode().is2xxSuccessful() && response.getBody() != null )
-                return response.getBody().stream()
-                        .map(RealmRoleDTO::getName)
-                        .filter(name -> !excludedList.contains(name))
-                        .toList();
-
-            // Invalid Response return empty List
-            return Collections.emptyList();
+            
+            // Parse response
+            return Optional.ofNullable(response)
+                    .filter(resp -> resp.getStatusCode().is2xxSuccessful())
+                    .map(ResponseEntity::getBody)
+                    .map(body -> body.stream()
+                            .map(RealmRoleDTO::getName)
+                            .filter(name -> !excludedList.contains(name))
+                            .toList())
+                    .orElse(Collections.emptyList());
         } catch (HttpClientErrorException | HttpServerErrorException e) {
             log.error("HTTP error during retrieval of user roles: {}", e.getMessage(), e);
             throw new KeycloakException("HTTP error during retrieval of user roles", e);
@@ -108,7 +121,7 @@ public class AdminService implements IAdminService {
 
             HttpEntity<Void> entity = new HttpEntity<>(headers);
 
-            String requestUri = adminUri.concat("/groups");
+            String requestUri = adminUri.concat(groupPath);
             ResponseEntity<List<GroupDTO>> response = restTemplate.exchange(
                     requestUri,
                     HttpMethod.GET,
@@ -116,14 +129,14 @@ public class AdminService implements IAdminService {
                     new ParameterizedTypeReference<>() {}
             );
 
-            // Valid Resposne
-            if (response.getStatusCode().is2xxSuccessful() && response.getBody() != null)
-                return response.getBody().stream()
-                        .map(GroupDTO::getName)
-                        .toList();
-
-            // Invalid Response return empty List
-            return Collections.emptyList();
+            // Parse response
+            return Optional.ofNullable(response)
+              .filter(resp -> resp.getStatusCode().is2xxSuccessful())
+              .map(ResponseEntity::getBody)
+              .map(body -> body.stream()
+              .map(GroupDTO::getName)
+                      .toList())
+              .orElse(Collections.emptyList());
         } catch (HttpClientErrorException | HttpServerErrorException e) {
             log.error("HTTP error during retrieval of pilot codes: {}", e.getMessage(), e);
             throw new KeycloakException("HTTP error during retrieval of pilot codes", e);
@@ -156,7 +169,7 @@ public class AdminService implements IAdminService {
                 return Collections.emptyList();
             }
 
-            String requestUri = adminUri.concat("/clients/").concat(clientId).concat("/roles?briefRepresentation=false");
+            String requestUri = adminUri.concat(clientPath).concat("/").concat(clientId).concat("/roles?briefRepresentation=false");
             ResponseEntity<List<RoleRepresentationDTO>> response = restTemplate.exchange(
                     requestUri,
                     HttpMethod.GET,
@@ -164,22 +177,25 @@ public class AdminService implements IAdminService {
                     new ParameterizedTypeReference<>() {}
             );
 
-            // Valid Resposne
-            if (response.getStatusCode().is2xxSuccessful() && response.getBody() != null )
-                // Return results either filtered by Pilot or return all results
-                if (pilot.equals("ALL")){ // Case for SUPER_ADMIN
-                    return response.getBody().stream()
-                            .map(RoleRepresentationDTO::toUserRoleDTO)
-                            .toList();
-                } else { // Case for ADMINS
-                    return response.getBody().stream()
-                            .map(RoleRepresentationDTO::toUserRoleDTO)
-                            .filter(role -> pilot.equals(role.getPilotCode() != null ? role.getPilotCode().toString() : null))
-                            .toList();
-                }
-
-            // Invalid Response return empty List
-            return Collections.emptyList();
+            // Parse Response
+            return Optional.ofNullable(response)
+              .filter(resp -> resp.getStatusCode().is2xxSuccessful())
+              .map(ResponseEntity::getBody)
+              .map(body -> {
+                  if (pilot.equals("ALL")) { // Case for SUPER_ADMIN
+                      return body.stream()
+                              .map(RoleRepresentationDTO::toUserRoleDTO)
+                              .toList();
+                  } else { // Case for ADMINS
+                      return body.stream()
+                              .map(RoleRepresentationDTO::toUserRoleDTO)
+                              .filter(role -> pilot.equals(Optional.ofNullable(role.getPilotCode())
+                                      .map(Object::toString)
+                                      .orElse(null)))
+                              .toList();
+                  }
+              })
+              .orElse(Collections.emptyList());
         } catch (HttpClientErrorException | HttpServerErrorException e) {
             log.error("HTTP error during retrieval of user roles: {}", e.getMessage(), e);
             throw new KeycloakException("HTTP error during retrieval of user roles", e);
@@ -216,7 +232,7 @@ public class AdminService implements IAdminService {
                 throw new DataRetrievalException(CLIENT_NOT_FOUND_MESSAGE);
 
             // Create the URI and make the POST request
-            String requestUri = adminUri.concat("/clients/").concat(clientId).concat("/roles");
+            String requestUri = adminUri.concat(clientPath).concat("/").concat(clientId).concat(rolePath);
             ResponseEntity<Void> response = restTemplate.exchange(
                     requestUri,
                     HttpMethod.POST,
@@ -230,9 +246,15 @@ public class AdminService implements IAdminService {
 
             // Assign the Role to the Group (Pilot)
             return assignUserRoleToPilot(userRole.getName() , userRole.getPilotCode().toString(), clientId, token);
-        } catch (HttpClientErrorException | HttpServerErrorException e) {
-            log.error("HTTP error during creating an new user role: {}", e.getMessage(), e);
-            throw new KeycloakException("HTTP error during creating an new user role", e);
+        } catch (HttpServerErrorException e) {
+            log.error("HTTP server error during creating an new user role: {}", e.getMessage(), e);
+            throw new KeycloakException("HTTP server error during creating an new user role", e);
+        } catch (HttpClientErrorException e) {
+            Map<String, Object> responseBody = e.getResponseBodyAs(new ParameterizedTypeReference<Map<String, Object>>() {});
+            if (responseBody != null && responseBody.containsKey(ERROR_FIELD)) {
+                throw new ResourceAlreadyExistsException(responseBody.get(ERROR_FIELD).toString());
+            }
+            throw new ResourceAlreadyExistsException(e.getResponseBodyAsString());
         } catch (RestClientException e) {
             log.error("Error during creating an new user role: {}", e.getMessage(), e);
             throw new KeycloakException("Error during creating an new user role", e);
@@ -251,7 +273,7 @@ public class AdminService implements IAdminService {
      */
     @Override
     public UserRoleDTO retrieveUserRole(String tokenValue, String roleName) {
-        RoleRepresentationDTO existingRole = findRoleRepresentationByName(roleName, keycloakSupportService.getClientId(), tokenValue);
+        RoleRepresentationDTO existingRole = keycloakSupportService.findRoleRepresentationByName(roleName, keycloakSupportService.getClientId(), tokenValue);
         if (existingRole == null)
             throw new DataRetrievalException(ROLE_NOT_FOUND_MESSAGE);
         return RoleRepresentationDTO.toUserRoleDTO(existingRole);
@@ -281,7 +303,7 @@ public class AdminService implements IAdminService {
 
         // Create the URI and make the POST request
         StringBuilder requestUri = new StringBuilder();
-        requestUri.append(adminUri).append("/clients/").append(clientId).append("/roles/").append(roleName);
+        requestUri.append(adminUri).append(clientPath).append("/").append(clientId).append(rolePath).append("/").append(roleName);
         try{
             ResponseEntity<Void> response = restTemplate.exchange(
                     requestUri.toString(),
@@ -292,9 +314,15 @@ public class AdminService implements IAdminService {
 
             // Return true if response is Successful
             return response.getStatusCode().is2xxSuccessful();
-        } catch (HttpClientErrorException | HttpServerErrorException e) {
-            log.error("HTTP error during deleting user role information: {}", e.getMessage(), e);
-            throw new KeycloakException("HTTP error during deleting user role information", e);
+        } catch (HttpServerErrorException e) {
+            log.error("HTTP server error during deleting user role information: {}", e.getMessage(), e);
+            throw new KeycloakException("HTTP server error during deleting user role information", e);
+        } catch (HttpClientErrorException e) {
+          Map<String, Object> responseBody = e.getResponseBodyAs(new ParameterizedTypeReference<Map<String, Object>>() {});
+          if (responseBody != null && responseBody.containsKey(ERROR_FIELD)) {
+              throw new DataRetrievalException(responseBody.get(ERROR_FIELD).toString());
+          }
+          throw new DataRetrievalException("Unable to locate user role");
         } catch (RestClientException e) {
             log.error("Error during deleting user role information: {}", e.getMessage(), e);
             throw new KeycloakException("Error during deleting user role information", e);
@@ -323,7 +351,7 @@ public class AdminService implements IAdminService {
             throw new DataRetrievalException(CLIENT_NOT_FOUND_MESSAGE);
 
         // Try locating the RoleRepresentation
-        RoleRepresentationDTO existingRole = findRoleRepresentationByName(existingRoleName, clientId, tokenValue);
+        RoleRepresentationDTO existingRole = keycloakSupportService.findRoleRepresentationByName(existingRoleName, clientId, tokenValue);
         if (existingRole == null)
             throw new DataRetrievalException(ROLE_NOT_FOUND_MESSAGE);
 
@@ -333,7 +361,7 @@ public class AdminService implements IAdminService {
 
         // Create the URI and make the POST request
         StringBuilder requestUri = new StringBuilder();
-        requestUri.append(adminUri).append("/clients/").append(clientId).append("/roles/").append(existingRoleName);
+        requestUri.append(adminUri).append(clientPath).append("/").append(clientId).append(rolePath).append("/").append(existingRoleName);
         try{
             ResponseEntity<Void> response = restTemplate.exchange(
                     requestUri.toString(),
@@ -381,7 +409,7 @@ public class AdminService implements IAdminService {
 
         // Create the URI and make the GET request
         StringBuilder requestUri = new StringBuilder();
-        requestUri.append(adminUri).append("/groups/").append(groupId).append("/role-mappings/clients/").append(clientId);
+        requestUri.append(adminUri).append(groupPath).append("/").append(groupId).append("/role-mappings/clients/").append(clientId);
         try{
             ResponseEntity<List<RoleRepresentationDTO>> response = restTemplate.exchange(
                     requestUri.toString(),
@@ -390,13 +418,14 @@ public class AdminService implements IAdminService {
                     new ParameterizedTypeReference<>() {}
             );
 
-            // Return true if response is Successful
-            if (response.getStatusCode().is2xxSuccessful() && response.getBody() != null )
-                return response.getBody().stream()
+            // Parse Response
+            return Optional.ofNullable(response)
+                .filter(resp -> resp.getStatusCode().is2xxSuccessful())
+                .map(ResponseEntity::getBody)
+                .map(body -> body.stream()
                         .map(RoleRepresentationDTO::getName)
-                        .toList();
-
-            return Collections.emptyList();
+                        .toList())
+                .orElse(Collections.emptyList());
         } catch (HttpClientErrorException | HttpServerErrorException e) {
             log.error("HTTP error during retrieving user role per pilot: {}", e.getMessage(), e);
             throw new KeycloakException("HTTP error during retrieving user role per pilot", e);
@@ -430,7 +459,7 @@ public class AdminService implements IAdminService {
 
         // Create the URI and make the GET request
         StringBuilder requestUri = new StringBuilder();
-        requestUri.append(adminUri).append("/clients/").append(clientId).append("/roles/").append(userRole).append("/users");
+        requestUri.append(adminUri).append(clientPath).append("/").append(clientId).append(rolePath).append("/").append(userRole).append("/users");
         try{
             ResponseEntity<List<UserRepresentationDTO>> response = restTemplate.exchange(
                     requestUri.toString(),
@@ -439,13 +468,14 @@ public class AdminService implements IAdminService {
                     new ParameterizedTypeReference<>() {}
             );
 
-            // Return true if response is Successful
-            if (response.getStatusCode().is2xxSuccessful() && response.getBody() != null )
-                return response.getBody().stream()
-                        .map(UserRepresentationDTO::toUserDTO)
-                        .toList();
-
-            return Collections.emptyList();
+             // Parse Response
+             return Optional.ofNullable(response)
+                .filter(resp -> resp.getStatusCode().is2xxSuccessful())
+                .map(ResponseEntity::getBody)
+                .map(body -> body.stream()
+                .map(UserRepresentationDTO::toUserDTO)
+                        .toList())
+                .orElse(Collections.emptyList());
         } catch (HttpClientErrorException | HttpServerErrorException e) {
             log.error("HTTP error during retrieving users in specific role: {}", e.getMessage(), e);
             throw new KeycloakException("HTTP error during retrieving users in specific role", e);
@@ -471,7 +501,7 @@ public class AdminService implements IAdminService {
             throw new DataRetrievalException(GROUP_NOT_FOUND_MESSAGE);
 
         // Retrieve Role Representation by Name
-        RoleRepresentationDTO roleRepr = findRoleRepresentationByName(userRole, clientId, token);
+        RoleRepresentationDTO roleRepr = keycloakSupportService.findRoleRepresentationByName(userRole, clientId, token);
         if (roleRepr == null)
             throw new DataRetrievalException(ROLE_NOT_FOUND_MESSAGE);
 
@@ -484,7 +514,7 @@ public class AdminService implements IAdminService {
 
         // Create the URI and make the POST request
         StringBuilder requestUri = new StringBuilder();
-        requestUri.append(adminUri).append("/groups/").append(groupId).append("/role-mappings/clients/").append(clientId);
+        requestUri.append(adminUri).append(groupPath).append("/").append(groupId).append("/role-mappings/clients/").append(clientId);
         try{
             ResponseEntity<Void> response = restTemplate.exchange(
                     requestUri.toString(),
@@ -501,47 +531,6 @@ public class AdminService implements IAdminService {
         } catch (RestClientException e) {
             log.error("Error during assigning role to specific group: {}", e.getMessage(), e);
             throw new KeycloakException("Error during assigning role to specific group", e);
-        }
-    }
-
-    /**
-     * Find a Role Representation By Name
-     *
-     * @param userRole : User role to retrieve
-     * @param token : JWT Token value
-     * @return RoleRepresentationDTO : Role Representation
-     */
-    private RoleRepresentationDTO findRoleRepresentationByName(String userRole, String clientId, String token) {
-        // Set Headers
-        HttpHeaders headers = new HttpHeaders();
-        headers.setBearerAuth(token);
-        headers.setContentType(MediaType.APPLICATION_JSON);
-
-        HttpEntity<Void> entity = new HttpEntity<>(headers);
-
-        // Create the URI and make the POST request
-        StringBuilder requestUri = new StringBuilder();
-        requestUri.append(adminUri).append("/clients/").append(clientId).append("/roles/").append(userRole);
-        try{
-            ResponseEntity<RoleRepresentationDTO> response = restTemplate.exchange(
-                    requestUri.toString(),
-                    HttpMethod.GET,
-                    entity,
-                    new ParameterizedTypeReference<>() {}
-            );
-
-            // Locate and return the Role Representation
-            if (response.getStatusCode().is2xxSuccessful() && response.getBody() != null )
-                return response.getBody();
-
-            // Invalid Response return null
-            return null;
-        } catch (HttpClientErrorException | HttpServerErrorException e) {
-            log.error("HTTP error during locating role information: {}", e.getMessage(), e);
-            throw new KeycloakException("HTTP error during locating role information", e);
-        } catch (RestClientException e) {
-            log.error("Error during locating role information: {}", e.getMessage(), e);
-            throw new KeycloakException("Error during locating role information", e);
         }
     }
 

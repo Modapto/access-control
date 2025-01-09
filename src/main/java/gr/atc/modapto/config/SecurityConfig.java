@@ -55,7 +55,7 @@ public class SecurityConfig {
                                 .exceptionHandling(exc -> exc.authenticationEntryPoint(entryPoint))
                                 // HTTP Requests authorization properties on URLs
                                 .authorizeHttpRequests(authorizeRequests -> authorizeRequests
-                                                .requestMatchers("/api/users/authenticate", "/api/users/refresh-token", "/api/users/activate", "/api/user-manager/**").permitAll()
+                                                .requestMatchers("/api/users/authenticate", "/api/users/refresh-token", "/api/users/activate", "/api/users/reset-password", "/api/users/forgot-password", "/api/user-manager/**").permitAll()
                                                 .anyRequest().authenticated())
                                 // JWT Authentication Configuration to use with Keycloak
                                 .oauth2ResourceServer(oauth2ResourceServerCustomizer -> oauth2ResourceServerCustomizer
