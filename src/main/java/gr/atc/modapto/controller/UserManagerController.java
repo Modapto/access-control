@@ -358,13 +358,14 @@ public class UserManagerController {
       @ApiResponse(responseCode = "500",
           description = "Unable to update user's password in Keycloak")})
   @PutMapping(value = "/change-password")
-  public ResponseEntity<BaseResponse<String>> changePassword(@Valid @RequestBody PasswordDTO passwords,
+  public ResponseEntity<BaseResponse<AuthenticationResponseDTO>> changePassword(@Valid @RequestBody PasswordDTO passwords,
       @AuthenticationPrincipal Jwt jwt) {
   
     String userId = JwtUtils.extractUserId(jwt);
-    if (userManagerService.changePassword(passwords, userId, jwt.getTokenValue()))
+    AuthenticationResponseDTO newAuthentication = userManagerService.changePassword(passwords, userId, jwt.getTokenValue());
+    if (newAuthentication != null)
       return new ResponseEntity<>(
-          BaseResponse.success(null, "User's password updated successfully"), HttpStatus.OK);
+          BaseResponse.success(newAuthentication, "User's password updated successfully"), HttpStatus.OK);
     else
       return new ResponseEntity<>(
           BaseResponse.error("Unable to update user's password in Keycloak"),

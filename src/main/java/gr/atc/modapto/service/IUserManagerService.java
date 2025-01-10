@@ -22,7 +22,7 @@ public interface IUserManagerService {
 
   boolean deleteUser(String userId, String token);
 
-  boolean changePassword(PasswordDTO passwords, String userId, String token);
+  AuthenticationResponseDTO changePassword(PasswordDTO passwords, String userId, String token);
 
   UserRepresentationDTO retrieveUserByEmail(String email, String token);
 

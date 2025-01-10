@@ -124,6 +124,7 @@ public class UserManagerService implements IUserManagerService {
 
       HttpEntity<MultiValueMap<String, String>> entity =
           getMultiValueMapHttpEntity(credentials, refreshToken, headers);
+
       ResponseEntity<Map<String, Object>> response = restTemplate.exchange(tokenUri,
           HttpMethod.POST, entity, new ParameterizedTypeReference<>() {});
 
@@ -358,14 +359,16 @@ public class UserManagerService implements IUserManagerService {
    * @return True on success, False on error
    */
   @Override
-  public boolean changePassword(PasswordDTO passwords, String userId, String token) {
+  public AuthenticationResponseDTO changePassword(PasswordDTO passwords, String userId, String token) {
     // Validate that current user's password match with the given one - Try locating him and then try authenticate him
     UserRepresentationDTO user = retrieveUserById(userId, token);
     if (user == null)
       throw new DataRetrievalException("User with this ID not found in Keycloak"); 
-
+    
     // If user can not authenticate with given current password then throw error
-    if (authenticate(new CredentialsDTO(user.getEmail(), passwords.getCurrentPassword()), null) == null)
+    AuthenticationResponseDTO userAuthentication = authenticate(new CredentialsDTO(user.getEmail(), passwords.getCurrentPassword()), null);
+    log.info("Authentication generated: {}")
+    if (userAuthentication == null)
       throw new DataRetrievalException("Provided current password is not correct");
 
     // Set the new Password
@@ -374,7 +377,7 @@ public class UserManagerService implements IUserManagerService {
     try {
       // Set Headers
       HttpHeaders headers = new HttpHeaders();
-      headers.setBearerAuth(token);
+      headers.setBearerAuth(userAuthentication.getAccessToken());
       headers.setContentType(MediaType.APPLICATION_JSON);
 
       HttpEntity<CredentialRepresentationDTO> entity = new HttpEntity<>(credentials, headers);
@@ -383,7 +386,11 @@ public class UserManagerService implements IUserManagerService {
       ResponseEntity<Object> response =
           restTemplate.exchange(requestUri, HttpMethod.PUT, entity, Object.class);
 
-      return response.getStatusCode().is2xxSuccessful();
+       // Parse response
+       return Optional.ofNullable(response)
+          .filter(resp -> resp.getStatusCode().is2xxSuccessful())
+          .map(resp -> userAuthentication)
+          .orElse(null);
     } catch (HttpClientErrorException | HttpServerErrorException e) {
       log.error("HTTP error during changing password of user with id {} : {}, Response body: {}",
           userId, e.getMessage(), e.getResponseBodyAsString(), e);
@@ -419,7 +426,7 @@ public class UserManagerService implements IUserManagerService {
           HttpMethod.GET, entity, new ParameterizedTypeReference<>() {});
 
       // Parse response
-          return Optional.ofNullable(response)
+      return Optional.ofNullable(response)
             .filter(resp -> resp.getStatusCode().is2xxSuccessful())
             .map(ResponseEntity::getBody)
             .filter(body -> body != null && !body.isEmpty())

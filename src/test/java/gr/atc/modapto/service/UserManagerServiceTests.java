@@ -406,10 +406,10 @@ class UserManagerServiceTests {
             .thenReturn(new ResponseEntity<>(null, HttpStatus.NO_CONTENT));
 
     // When
-    boolean result = userManagerService.changePassword(passwords, userId, MOCK_TOKEN);
+    AuthenticationResponseDTO result = userManagerService.changePassword(passwords, userId, MOCK_TOKEN);
 
     // Then
-    assertTrue(result);
+    assertNotNull(result);
   }
 
   @DisplayName("Logout user: Success")

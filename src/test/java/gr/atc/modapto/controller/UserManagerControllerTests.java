@@ -377,9 +377,10 @@ class UserManagerControllerTests {
   @Test
   void givenValidPassword_whenChangePassword_thenReturnSuccess() throws Exception {
     // Given
+    AuthenticationResponseDTO auth = AuthenticationResponseDTO.builder().accessToken("tempToken").build();
     PasswordDTO passwords = PasswordDTO.builder().currentPassword("@CurrentPass123@").newPassword("NewPassword123@").build();
-    given(userManagerService.changePassword(any(), anyString(), anyString()))
-        .willReturn(true);
+    given(userManagerService.changePassword(any(PasswordDTO.class), anyString(), anyString()))
+        .willReturn(auth);
 
     // Mock JWT authentication
     JwtAuthenticationToken jwtAuthenticationToken =
