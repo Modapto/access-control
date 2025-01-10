@@ -35,8 +35,10 @@ import org.springframework.test.util.ReflectionTestUtils;
 import org.springframework.web.client.HttpServerErrorException;
 import org.springframework.web.client.RestClientException;
 import org.springframework.web.client.RestTemplate;
+
 import gr.atc.modapto.dto.AuthenticationResponseDTO;
 import gr.atc.modapto.dto.CredentialsDTO;
+import gr.atc.modapto.dto.PasswordDTO;
 import gr.atc.modapto.dto.UserDTO;
 import gr.atc.modapto.dto.keycloak.ClientRepresentationDTO;
 import gr.atc.modapto.dto.keycloak.RoleRepresentationDTO;
@@ -377,14 +379,34 @@ class UserManagerServiceTests {
   void givenNewPassword_whenChangePassword_thenReturnTrue() {
     // Given
     String userId = "123";
-    String newPassword = "newPassword";
+    String email = "test@email.com";
+    PasswordDTO passwords = PasswordDTO.builder().currentPassword("@CurrentPass123@").newPassword("NewPassword123@").build();
+    Map<String, Object> mockResponseBody = new HashMap<>();
+    mockResponseBody.put(TOKEN, "mockAccessToken");
+    mockResponseBody.put("expires_in", 1800);
+    mockResponseBody.put("token_type", "JWT");
+    mockResponseBody.put(GRANT_TYPE_REFRESH_TOKEN, "mockRefreshToken");
+    mockResponseBody.put("refresh_expires_in", 1800);
 
+    ResponseEntity<Map<String, Object>> mockResponse = new ResponseEntity<>(mockResponseBody, HttpStatus.OK);
+
+    // Mock
+    // Mock user retrievals
+    when(restTemplate.exchange(eq(MOCK_ADMIN_URI + "/userPath/" + userId), eq(HttpMethod.GET),
+        any(HttpEntity.class), eq(UserRepresentationDTO.class)))
+            .thenReturn(new ResponseEntity<>(userRepresentation, HttpStatus.OK));
+
+    // Mock authenticate
+    when(restTemplate.exchange(eq(MOCK_TOKEN_URI), eq(HttpMethod.POST), any(),
+        any(ParameterizedTypeReference.class))).thenReturn(mockResponse);
+
+    // Mock Password Reset
     when(restTemplate.exchange(eq(MOCK_ADMIN_URI + "/userPath/" + userId + "/reset-password"),
         eq(HttpMethod.PUT), any(HttpEntity.class), eq(Object.class)))
             .thenReturn(new ResponseEntity<>(null, HttpStatus.NO_CONTENT));
 
     // When
-    boolean result = userManagerService.changePassword(newPassword, userId, MOCK_TOKEN);
+    boolean result = userManagerService.changePassword(passwords, userId, MOCK_TOKEN);
 
     // Then
     assertTrue(result);

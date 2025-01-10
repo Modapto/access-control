@@ -27,6 +27,7 @@ import org.springframework.web.client.RestTemplate;
 
 import gr.atc.modapto.dto.AuthenticationResponseDTO;
 import gr.atc.modapto.dto.CredentialsDTO;
+import gr.atc.modapto.dto.PasswordDTO;
 import gr.atc.modapto.dto.UserDTO;
 import gr.atc.modapto.dto.keycloak.CredentialRepresentationDTO;
 import gr.atc.modapto.dto.keycloak.RoleRepresentationDTO;
@@ -352,14 +353,24 @@ public class UserManagerService implements IUserManagerService {
   /**
    * Change user's password in Keycloak
    *
-   * @param userId : User ID correlated with the JWT
+   * @param passwords : Current and New Password
    * @param token : JWT Token Value
    * @return True on success, False on error
    */
   @Override
-  public boolean changePassword(String password, String userId, String token) {
+  public boolean changePassword(PasswordDTO passwords, String userId, String token) {
+    // Validate that current user's password match with the given one - Try locating him and then try authenticate him
+    UserRepresentationDTO user = retrieveUserById(userId, token);
+    if (user == null)
+      throw new DataRetrievalException("User with this ID not found in Keycloak"); 
+
+    // If user can not authenticate with given current password then throw error
+    if (authenticate(new CredentialsDTO(user.getEmail(), passwords.getCurrentPassword()), null) == null)
+      throw new DataRetrievalException("Provided current password is not correct");
+
+    // Set the new Password
     CredentialRepresentationDTO credentials = CredentialRepresentationDTO.builder().temporary(false)
-        .type(GRANT_TYPE_PASSWORD).value(password).build();
+        .type(GRANT_TYPE_PASSWORD).value(passwords.getNewPassword()).build();
     try {
       // Set Headers
       HttpHeaders headers = new HttpHeaders();

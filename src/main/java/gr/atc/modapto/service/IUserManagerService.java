@@ -5,6 +5,7 @@ import java.util.concurrent.CompletableFuture;
 
 import gr.atc.modapto.dto.AuthenticationResponseDTO;
 import gr.atc.modapto.dto.CredentialsDTO;
+import gr.atc.modapto.dto.PasswordDTO;
 import gr.atc.modapto.dto.UserDTO;
 import gr.atc.modapto.dto.keycloak.UserRepresentationDTO;
 
@@ -21,7 +22,7 @@ public interface IUserManagerService {
 
   boolean deleteUser(String userId, String token);
 
-  boolean changePassword(String password, String userId, String token);
+  boolean changePassword(PasswordDTO passwords, String userId, String token);
 
   UserRepresentationDTO retrieveUserByEmail(String email, String token);
 

@@ -35,6 +35,7 @@ import com.fasterxml.jackson.databind.ObjectMapper;
 
 import gr.atc.modapto.dto.AuthenticationResponseDTO;
 import gr.atc.modapto.dto.CredentialsDTO;
+import gr.atc.modapto.dto.PasswordDTO;
 import gr.atc.modapto.dto.UserDTO;
 import gr.atc.modapto.dto.keycloak.UserRepresentationDTO;
 import gr.atc.modapto.enums.PilotCode;
@@ -376,9 +377,8 @@ class UserManagerControllerTests {
   @Test
   void givenValidPassword_whenChangePassword_thenReturnSuccess() throws Exception {
     // Given
-    UserDTO userDTO = new UserDTO();
-    userDTO.setPassword("Password123@");
-    given(userManagerService.changePassword(anyString(), anyString(), anyString()))
+    PasswordDTO passwords = PasswordDTO.builder().currentPassword("@CurrentPass123@").newPassword("NewPassword123@").build();
+    given(userManagerService.changePassword(any(), anyString(), anyString()))
         .willReturn(true);
 
     // Mock JWT authentication
@@ -388,7 +388,7 @@ class UserManagerControllerTests {
 
     // When
     ResultActions response = mockMvc.perform(put("/api/users/change-password")
-        .contentType(MediaType.APPLICATION_JSON).content(objectMapper.writeValueAsString(userDTO)));
+        .contentType(MediaType.APPLICATION_JSON).content(objectMapper.writeValueAsString(passwords)));
 
     // Then
     response.andExpect(status().isOk()).andExpect(jsonPath("$.success", is(true)))
@@ -399,7 +399,7 @@ class UserManagerControllerTests {
   @Test
   void givenMissingPassword_whenChangePassword_thenReturnBadRequest() throws Exception {
     // Given
-    UserDTO userDTO = new UserDTO(); // No password set
+    PasswordDTO passwords = PasswordDTO.builder().build();
 
     // Mock JWT authentication
     JwtAuthenticationToken jwtAuthenticationToken =
@@ -408,11 +408,11 @@ class UserManagerControllerTests {
 
     // When
     ResultActions response = mockMvc.perform(put("/api/users/change-password")
-        .contentType(MediaType.APPLICATION_JSON).content(objectMapper.writeValueAsString(userDTO)));
+        .contentType(MediaType.APPLICATION_JSON).content(objectMapper.writeValueAsString(passwords)));
 
     // Then
     response.andExpect(status().isBadRequest()).andExpect(jsonPath("$.success", is(false)))
-        .andExpect(jsonPath("$.message", is("Password is missing")));
+        .andExpect(jsonPath("$.message", is("Validation failed")));
   }
 
   @DisplayName("Fetch Users: Success")

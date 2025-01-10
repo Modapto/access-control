@@ -156,7 +156,7 @@ public class EmailService implements IEmailService {
   public CompletableFuture<Void> sendResetPasswordLink(String username, String email, String resetToken) {
     return CompletableFuture.runAsync(() -> {
         // Create the activation link
-        String resetPasswordLink = String.format("%s/reset=password?token=%s", frontendUrl, resetToken);
+        String resetPasswordLink = String.format("%s/reset-password?token=%s", frontendUrl, resetToken);
 
         // Create the email template
         String htmlContent = String.format(RESET_PASSWORD_EMAIL_TEMPLATE, username, resetPasswordLink

@@ -22,6 +22,7 @@ import org.springframework.web.bind.annotation.RestController;
 
 import gr.atc.modapto.dto.AuthenticationResponseDTO;
 import gr.atc.modapto.dto.CredentialsDTO;
+import gr.atc.modapto.dto.PasswordDTO;
 import gr.atc.modapto.dto.UserDTO;
 import gr.atc.modapto.dto.keycloak.UserRepresentationDTO;
 import gr.atc.modapto.enums.PilotRole;
@@ -339,7 +340,7 @@ public class UserManagerController {
   /**
    * Change user's password in Keycloak
    *
-   * @param user: UserDTO information containing the password
+   * @param passwords: Current and New passwords
    * @param jwt: JWT Token
    * @return Message of success or failure
    */
@@ -350,23 +351,18 @@ public class UserManagerController {
       @ApiResponse(responseCode = "400",
           description = "Invalid request: Either credentials or token must be provided!"),
       @ApiResponse(responseCode = "400", description = "Validation failed"),
-      @ApiResponse(responseCode = "400", description = "Password is missing"),
-      @ApiResponse(responseCode = "400", description = "An unexpected error occured"),
+      @ApiResponse(responseCode = "401", description = "Invalid authorization credentials provided."),
       @ApiResponse(responseCode = "403",
           description = "Invalid authorization parameters. Check JWT or CSRF Token"),
+      @ApiResponse(responseCode = "404", description = "User with this ID not found in Keycloak"),
       @ApiResponse(responseCode = "500",
           description = "Unable to update user's password in Keycloak")})
   @PutMapping(value = "/change-password")
-  public ResponseEntity<BaseResponse<String>> changePassword(@RequestBody UserDTO user,
+  public ResponseEntity<BaseResponse<String>> changePassword(@Valid @RequestBody PasswordDTO passwords,
       @AuthenticationPrincipal Jwt jwt) {
-    // We utilize the Validation of password inside the UserDTO class. If password is missing then
-    // we return an error
-    if (user.getPassword() == null)
-      return new ResponseEntity<>(BaseResponse.error("Password is missing"),
-          HttpStatus.BAD_REQUEST);
-
+  
     String userId = JwtUtils.extractUserId(jwt);
-    if (userManagerService.changePassword(user.getPassword(), userId, jwt.getTokenValue()))
+    if (userManagerService.changePassword(passwords, userId, jwt.getTokenValue()))
       return new ResponseEntity<>(
           BaseResponse.success(null, "User's password updated successfully"), HttpStatus.OK);
     else
