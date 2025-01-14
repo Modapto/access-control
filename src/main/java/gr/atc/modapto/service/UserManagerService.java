@@ -93,17 +93,19 @@ public class UserManagerService implements IUserManagerService {
   private static final String QUERY_CLIENTS = "query-clients";
   private static final String VIEW_CLIENTS = "view-clients";
   private static final String QUERY_GROUPS = "query-groups";
+  private static final String MANAGE_REALM = "manage-groups";
+  private static final String VIEW_REALM = "view-groups";
   private static final String MANAGE_AUTHORIZATION = "manage-authorization";
 
   private static final List<String> USER_ROLES_MANAGEMENT_ARRAY =
-      List.of(MANAGE_USERS, QUERY_USERS, VIEW_USERS);
+      List.of(MANAGE_USERS, QUERY_USERS, VIEW_USERS, VIEW_CLIENTS, QUERY_CLIENTS, QUERY_GROUPS, VIEW_REALM, QUERY_REALMS);
   private static final List<String> ADMIN_ROLES_MANAGEMENT_ARRAY =
       List.of(QUERY_REALMS, MANAGE_CLIENTS, MANAGE_USERS, QUERY_USERS, MANAGE_AUTHORIZATION,
-          VIEW_USERS, QUERY_CLIENTS, VIEW_CLIENTS, QUERY_GROUPS);
+          VIEW_USERS, QUERY_CLIENTS, VIEW_CLIENTS, QUERY_GROUPS, MANAGE_REALM, VIEW_REALM);
   private static final List<String> SUPER_ADMIN_ROLES_MANAGEMENT_ARRAY =
-      List.of(QUERY_REALMS, "manage-realm", MANAGE_CLIENTS, "realm-admin", MANAGE_USERS,
+      List.of(QUERY_REALMS, MANAGE_REALM, MANAGE_CLIENTS, "realm-admin", MANAGE_USERS,
           QUERY_USERS, MANAGE_AUTHORIZATION, "view-identity-providers", VIEW_USERS, QUERY_CLIENTS,
-          VIEW_CLIENTS, QUERY_GROUPS, "view-events", "view-authorization", "view-realm");
+          VIEW_CLIENTS, QUERY_GROUPS, "view-events", "view-authorization", VIEW_REALM);
 
   public UserManagerService(KeycloakSupportService keycloakSupportService,
       IEmailService emailService) {
