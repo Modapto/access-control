@@ -53,7 +53,7 @@ public class UserManagerService implements IUserManagerService {
   private String adminUri;
 
   @Value("${keycloak.client-id}")
-  private String clientId;
+  private String clientName;
 
   @Value("${keycloak.client-secret}")
   private String clientSecret;
@@ -80,30 +80,33 @@ public class UserManagerService implements IUserManagerService {
   private static final String ACTIVATION_TOKEN = "activation_token";
   private static final String ACTIVATION_EXPIRY = "activation_expiry";
   private static final String RESET_TOKEN = "reset_token";
-  private static final String ERROR_FIELD = "errorMessage";
+  private static final String ERROR_MESSAGE_FIELD = "errorMessage";
 
-    // Arrays of realm-manage roles
-    private static final String VIEW_USERS = "view-users";
-    private static final String MANAGE_USERS = "manage-users";
-    private static final String QUERY_USERS = "query-users";
-    private static final String QUERY_REALMS = "query-realms";
-    private static final String MANAGE_CLIENTS = "manage-clients";
-    private static final String QUERY_CLIENTS = "query-clients";
-    private static final String VIEW_CLIENTS = "view-clients";
-    private static final String QUERY_GROUPS = "query-groups";
-    private static final String MANAGE_AUTHORIZATION = "manage-authorization";
-  
-    private static final List<String> USER_ROLES_MANAGEMENT_ARRAY =
-        List.of(MANAGE_USERS, QUERY_USERS, VIEW_USERS);
-    private static final List<String> ADMIN_ROLES_MANAGEMENT_ARRAY =
-        List.of(QUERY_REALMS, MANAGE_CLIENTS, MANAGE_USERS, QUERY_USERS,
-            MANAGE_AUTHORIZATION, VIEW_USERS, QUERY_CLIENTS, VIEW_CLIENTS, QUERY_GROUPS);
-    private static final List<String> SUPER_ADMIN_ROLES_MANAGEMENT_ARRAY = List.of(QUERY_REALMS,
-        "manage-realm", MANAGE_CLIENTS, "realm-admin", MANAGE_USERS, QUERY_USERS,
-        MANAGE_AUTHORIZATION, "view-identity-providers", VIEW_USERS, QUERY_CLIENTS,
-        VIEW_CLIENTS, QUERY_GROUPS, "view-events", "view-authorization", "view-realm");
+  // Arrays of realm-manage roles
+  private static final String REALM_MANAGEMENT_CLIENT = "realm-management";
+  private static final String REALM_CLIENT = "realm";
+  private static final String VIEW_USERS = "view-users";
+  private static final String MANAGE_USERS = "manage-users";
+  private static final String QUERY_USERS = "query-users";
+  private static final String QUERY_REALMS = "query-realms";
+  private static final String MANAGE_CLIENTS = "manage-clients";
+  private static final String QUERY_CLIENTS = "query-clients";
+  private static final String VIEW_CLIENTS = "view-clients";
+  private static final String QUERY_GROUPS = "query-groups";
+  private static final String MANAGE_AUTHORIZATION = "manage-authorization";
 
-  public UserManagerService(KeycloakSupportService keycloakSupportService, IEmailService emailService) {
+  private static final List<String> USER_ROLES_MANAGEMENT_ARRAY =
+      List.of(MANAGE_USERS, QUERY_USERS, VIEW_USERS);
+  private static final List<String> ADMIN_ROLES_MANAGEMENT_ARRAY =
+      List.of(QUERY_REALMS, MANAGE_CLIENTS, MANAGE_USERS, QUERY_USERS, MANAGE_AUTHORIZATION,
+          VIEW_USERS, QUERY_CLIENTS, VIEW_CLIENTS, QUERY_GROUPS);
+  private static final List<String> SUPER_ADMIN_ROLES_MANAGEMENT_ARRAY =
+      List.of(QUERY_REALMS, "manage-realm", MANAGE_CLIENTS, "realm-admin", MANAGE_USERS,
+          QUERY_USERS, MANAGE_AUTHORIZATION, "view-identity-providers", VIEW_USERS, QUERY_CLIENTS,
+          VIEW_CLIENTS, QUERY_GROUPS, "view-events", "view-authorization", "view-realm");
+
+  public UserManagerService(KeycloakSupportService keycloakSupportService,
+      IEmailService emailService) {
     this.keycloakSupportService = keycloakSupportService;
     this.emailService = emailService;
   }
@@ -174,8 +177,7 @@ public class UserManagerService implements IUserManagerService {
 
       String requestUri = adminUri.concat(userPath);
       ResponseEntity<Map<String, Object>> response = restTemplate.exchange(requestUri,
-          HttpMethod.POST, entity, new ParameterizedTypeReference<>() {
-              });
+          HttpMethod.POST, entity, new ParameterizedTypeReference<>() {});
 
       if (response.getStatusCode().is2xxSuccessful()) {
         // Extract the user ID from the Location header
@@ -189,13 +191,12 @@ public class UserManagerService implements IUserManagerService {
           e.getResponseBodyAsString(), e);
       throw new KeycloakException("HTTP sever error during user creation", e);
     } catch (HttpClientErrorException e) {
-      Map<String, Object> responseBody = e.getResponseBodyAs(new ParameterizedTypeReference<>() {
-      });
-      if (responseBody != null && responseBody.containsKey(ERROR_FIELD)) {
-        throw new ResourceAlreadyExistsException(responseBody.get(ERROR_FIELD).toString());
+      Map<String, Object> responseBody = e.getResponseBodyAs(new ParameterizedTypeReference<>() {});
+      if (responseBody != null && responseBody.containsKey(ERROR_MESSAGE_FIELD)) {
+        throw new ResourceAlreadyExistsException(responseBody.get(ERROR_MESSAGE_FIELD).toString());
       }
       throw new ResourceAlreadyExistsException(e.getResponseBodyAsString());
-    } catch(RestClientException e) {
+    } catch (RestClientException e) {
       log.error("Error during user creation: {}", e.getMessage(), e);
       throw new KeycloakException("Error during user creation", e);
     }
@@ -261,12 +262,9 @@ public class UserManagerService implements IUserManagerService {
           HttpMethod.GET, entity, new ParameterizedTypeReference<>() {});
 
       // Parse response
-      return Optional.ofNullable(response)
-          .filter(r -> r.getStatusCode().is2xxSuccessful())
-          .map(ResponseEntity::getBody)
-          .filter(body -> body != null && !body.isEmpty())
-          .map(body -> body.stream()
-              .map(UserRepresentationDTO::toUserDTO)
+      return Optional.ofNullable(response).filter(r -> r.getStatusCode().is2xxSuccessful())
+          .map(ResponseEntity::getBody).filter(body -> body != null && !body.isEmpty())
+          .map(body -> body.stream().map(UserRepresentationDTO::toUserDTO)
               .filter(user -> "ALL".equals(pilot) || pilot.equals(user.getPilotCode().toString()))
               .toList())
           .orElse(Collections.emptyList());
@@ -302,13 +300,9 @@ public class UserManagerService implements IUserManagerService {
           HttpMethod.GET, entity, new ParameterizedTypeReference<>() {});
 
       // Parse response
-      return Optional.ofNullable(response)
-          .filter(resp -> resp.getStatusCode().is2xxSuccessful())
-          .map(ResponseEntity::getBody)
-          .filter(body -> body != null && !body.isEmpty())
-          .map(body -> body.getFirst())
-          .map(UserRepresentationDTO::toUserDTO)
-          .orElse(null);
+      return Optional.ofNullable(response).filter(resp -> resp.getStatusCode().is2xxSuccessful())
+          .map(ResponseEntity::getBody).filter(body -> body != null && !body.isEmpty())
+          .map(body -> body.getFirst()).map(UserRepresentationDTO::toUserDTO).orElse(null);
     } catch (HttpClientErrorException | HttpServerErrorException e) {
       log.error("HTTP error during retrieving specific user with id {} : {}, Response body: {}",
           userId, e.getMessage(), e.getResponseBodyAsString(), e);
@@ -359,15 +353,17 @@ public class UserManagerService implements IUserManagerService {
    * @return True on success, False on error
    */
   @Override
-  public AuthenticationResponseDTO changePassword(PasswordDTO passwords, String userId, String token) {
-    // Validate that current user's password match with the given one - Try locating him and then try authenticate him
+  public AuthenticationResponseDTO changePassword(PasswordDTO passwords, String userId,
+      String token) {
+    // Validate that current user's password match with the given one - Try locating him and then
+    // try authenticate him
     UserRepresentationDTO user = retrieveUserById(userId, token);
     if (user == null)
-      throw new DataRetrievalException("User with this ID not found in Keycloak"); 
-    
+      throw new DataRetrievalException("User with this ID not found in Keycloak");
+
     // If user can not authenticate with given current password then throw error
-    AuthenticationResponseDTO userAuthentication = authenticate(new CredentialsDTO(user.getEmail(), passwords.getCurrentPassword()), null);
-    log.info("Authentication generated: {}")
+    AuthenticationResponseDTO userAuthentication =
+        authenticate(new CredentialsDTO(user.getEmail(), passwords.getCurrentPassword()), null);
     if (userAuthentication == null)
       throw new DataRetrievalException("Provided current password is not correct");
 
@@ -382,15 +378,14 @@ public class UserManagerService implements IUserManagerService {
 
       HttpEntity<CredentialRepresentationDTO> entity = new HttpEntity<>(credentials, headers);
 
-      String requestUri = adminUri.concat(userPath).concat("/").concat(userId).concat("/reset-password");
+      String requestUri =
+          adminUri.concat(userPath).concat("/").concat(userId).concat("/reset-password");
       ResponseEntity<Object> response =
           restTemplate.exchange(requestUri, HttpMethod.PUT, entity, Object.class);
 
-       // Parse response
-       return Optional.ofNullable(response)
-          .filter(resp -> resp.getStatusCode().is2xxSuccessful())
-          .map(resp -> userAuthentication)
-          .orElse(null);
+      // Parse response
+      return Optional.ofNullable(response).filter(resp -> resp.getStatusCode().is2xxSuccessful())
+          .map(resp -> userAuthentication).orElse(null);
     } catch (HttpClientErrorException | HttpServerErrorException e) {
       log.error("HTTP error during changing password of user with id {} : {}, Response body: {}",
           userId, e.getMessage(), e.getResponseBodyAsString(), e);
@@ -426,20 +421,17 @@ public class UserManagerService implements IUserManagerService {
           HttpMethod.GET, entity, new ParameterizedTypeReference<>() {});
 
       // Parse response
-      return Optional.ofNullable(response)
-            .filter(resp -> resp.getStatusCode().is2xxSuccessful())
-            .map(ResponseEntity::getBody)
-            .filter(body -> body != null && !body.isEmpty())
-            .map(body -> body.getFirst())
-            .orElse(null);
+      return Optional.ofNullable(response).filter(resp -> resp.getStatusCode().is2xxSuccessful())
+          .map(ResponseEntity::getBody).filter(body -> body != null && !body.isEmpty())
+          .map(body -> body.getFirst()).orElse(null);
     } catch (HttpServerErrorException e) {
       log.error("HTTP error retrieving user by email: {}, Response body: {}", e.getMessage(),
-              e.getResponseBodyAsString(), e);
+          e.getResponseBodyAsString(), e);
       throw new KeycloakException("HTTP error during retrieving user by email", e);
     } catch (HttpClientErrorException e) {
       Map<String, Object> responseBody = e.getResponseBodyAs(new ParameterizedTypeReference<>() {});
-      if (responseBody != null && responseBody.containsKey(ERROR_FIELD)) {
-        throw new DataRetrievalException(responseBody.get(ERROR_FIELD).toString());
+      if (responseBody != null && responseBody.containsKey(ERROR_MESSAGE_FIELD)) {
+        throw new DataRetrievalException(responseBody.get(ERROR_MESSAGE_FIELD).toString());
       }
       throw new DataRetrievalException("User with this email not found in Keycloak");
     } catch (RestClientException | NoSuchElementException e) {
@@ -479,8 +471,8 @@ public class UserManagerService implements IUserManagerService {
       throw new KeycloakException("HTTP error during retrieving user by id", e);
     } catch (HttpClientErrorException e) {
       Map<String, Object> responseBody = e.getResponseBodyAs(new ParameterizedTypeReference<>() {});
-      if (responseBody != null && responseBody.containsKey(ERROR_FIELD)) {
-        throw new DataRetrievalException(responseBody.get(ERROR_FIELD).toString());
+      if (responseBody != null && responseBody.containsKey(ERROR_MESSAGE_FIELD)) {
+        throw new DataRetrievalException(responseBody.get(ERROR_MESSAGE_FIELD).toString());
       }
       throw new DataRetrievalException("User with this ID not found in Keycloak");
     } catch (RestClientException | NoSuchElementException e) {
@@ -501,7 +493,7 @@ public class UserManagerService implements IUserManagerService {
       CredentialsDTO credentials, String refreshToken, HttpHeaders headers) {
     MultiValueMap<String, String> body = new LinkedMultiValueMap<>();
     if (refreshToken == null) {
-      body.add(CLIENT_ID, clientId);
+      body.add(CLIENT_ID, clientName);
       body.add(CLIENT_SECRET, clientSecret);
       body.add(USERNAME, credentials.getEmail());
       body.add(GRANT_TYPE_PASSWORD, credentials.getPassword());
@@ -510,7 +502,7 @@ public class UserManagerService implements IUserManagerService {
     } else {
       body.add(GRANT_TYPE, GRANT_TYPE_REFRESH_TOKEN);
       body.add(GRANT_TYPE_REFRESH_TOKEN, refreshToken);
-      body.add(CLIENT_ID, clientId);
+      body.add(CLIENT_ID, clientName);
       body.add(CLIENT_SECRET, clientSecret);
       body.add(SCOPE, PROTOCOL);
     }
@@ -519,51 +511,105 @@ public class UserManagerService implements IUserManagerService {
   }
 
   /**
-   * Assign async the realm role of a new user
-   *
-   * @param pilotRole : Realm Role
-   * @param userId : ID of user
-   * @return Void
+   * Call functions to assign roles to user
+   * 
+   * @param user : User details
+   * @param existingUser : User Representation
+   * @param userId : User ID
+   * @param token : JWT Token value
    */
-  @Async("asyncPoolTaskExecutor")
   @Override
-  public CompletableFuture<Void> assignRealmRoles(String pilotRole, String userId, String token) {
+  @Async("asyncPoolTaskExecutor")
+  public CompletableFuture<Void> assignRolesToUser(UserDTO newUserDetails,
+      UserDTO existingUserDetails, String userId, String token) {
     return CompletableFuture.runAsync(() -> {
-      try {
-        RoleRepresentationDTO roleRepr = findRoleRepresentationByUserRole(pilotRole, token);
-        if (roleRepr == null) {
-          log.error("Unable to retrieve realm roles from Keycloak");
-          return;
-        }
+      // Trigger role assignments depending on use cases (Creation or Update)
+      if (existingUserDetails == null) {
+        // Assign Realm Role
+        assignRealmRoles(newUserDetails.getPilotRole().toString().toUpperCase(), userId, token);
 
-        // Set Headers
-        HttpHeaders headers = new HttpHeaders();
-        headers.setBearerAuth(token);
-        headers.setContentType(MediaType.APPLICATION_JSON);
+        // Assign Client Role
+        assignClientRole(newUserDetails.getUserRole().toUpperCase(), userId, token);
 
-        HttpEntity<List<RoleRepresentationDTO>> entity =
-            new HttpEntity<>(List.of(roleRepr), headers);
+        // Assign Realm-Management Roles
+        assignRealmManagementRoles(newUserDetails.getPilotRole().toString().toUpperCase(), userId,
+            token);
+      } else {
+        boolean updatedPilotRole = false;
 
-        String requestUri =
-            adminUri.concat(userPath).concat("/").concat(userId).concat("/role-mappings/realm");
-        ResponseEntity<Object> response =
-            restTemplate.exchange(requestUri, HttpMethod.POST, entity, Object.class);
+        // Update Case
+        if (newUserDetails.getPilotRole() != null && (existingUserDetails.getPilotRole() != null
+            && newUserDetails.getPilotRole() != existingUserDetails.getPilotRole()))
+          // Assign Realm Role
+          updatedPilotRole =
+              assignRealmRoles(newUserDetails.getPilotRole().toString().toUpperCase(), userId, token);
 
-        if (!response.getStatusCode().is2xxSuccessful())
-          log.error("Error assigning role mapping to user");
-      } catch (HttpClientErrorException | HttpServerErrorException e) {
-        log.error(
-            "HTTP error during assigning realm role for user with id {} : {}, Response body: {}",
-            userId, e.getMessage(), e.getResponseBodyAsString(), e);
-        throw new KeycloakException(
-            "HTTP error during  assigning realm role for user with id = ".concat(userId), e);
-      } catch (RestClientException e) {
-        log.error("Error during assigning realm role for user with id {} : {}", userId,
-            e.getMessage(), e);
-        throw new KeycloakException(
-            "Error during assigning realm role for user with id = ".concat(userId), e);
+        if (newUserDetails.getUserRole() != null && (existingUserDetails.getUserRole() != null
+            && !newUserDetails.getUserRole().equals(existingUserDetails.getUserRole())))
+          // Assign Client Role
+          assignClientRole(newUserDetails.getUserRole().toUpperCase(), userId, token);
+
+        // Assign Realm-Management Roles
+        if (updatedPilotRole)
+          assignRealmManagementRoles(newUserDetails.getPilotRole().toString().toUpperCase(), userId,
+              token);
       }
     });
+  }
+
+
+  /**
+   * Function to assign Realm Role to user
+   *
+   * @param newPilotRole : New Realm Role
+   * @param userId : ID of user
+   * @param token : JWT Token
+   * @return True on Success, False on Error
+   */
+  @Override
+  public boolean assignRealmRoles(String newPilotRole, String userId, String token) {
+    try {
+      // Locate the User
+      UserRepresentationDTO user = retrieveUserById(userId, token);
+      if (user == null)
+        return false;
+
+      // Delete old realm roles if available
+      if (!deleteUserRealmRoles(user, token))
+        return false;
+
+      // Locate the Role Representation
+      RoleRepresentationDTO roleRepr = findRealmRoleRepresentationByRoleName(newPilotRole, token);
+      if (roleRepr == null) {
+        log.error("Unable to retrieve realm roles from Keycloak");
+        return false;
+      }
+
+      // Set Headers
+      HttpHeaders headers = new HttpHeaders();
+      headers.setBearerAuth(token);
+      headers.setContentType(MediaType.APPLICATION_JSON);
+
+      HttpEntity<List<RoleRepresentationDTO>> entity = new HttpEntity<>(List.of(roleRepr), headers);
+
+      String requestUri = adminUri.concat(userPath).concat("/").concat(userId)
+          .concat("/role-mappings/").concat(REALM_CLIENT);
+      ResponseEntity<Object> response =
+          restTemplate.exchange(requestUri, HttpMethod.POST, entity, Object.class);
+
+      return response.getStatusCode().is2xxSuccessful();
+    } catch (HttpClientErrorException | HttpServerErrorException e) {
+      log.error(
+          "HTTP error during assigning realm role for user with id {} : {}, Response body: {}",
+          userId, e.getMessage(), e.getResponseBodyAsString(), e);
+      throw new KeycloakException(
+          "HTTP error during  assigning realm role for user with id = ".concat(userId), e);
+    } catch (RestClientException e) {
+      log.error("Error during assigning realm role for user with id {} : {}", userId,
+          e.getMessage(), e);
+      throw new KeycloakException(
+          "Error during assigning realm role for user with id = ".concat(userId), e);
+    }
   }
 
   /**
@@ -573,7 +619,7 @@ public class UserManagerService implements IUserManagerService {
    * @param token: JWT token value
    * @return RoleRepresentation if exists, otherwise null
    */
-  private RoleRepresentationDTO findRoleRepresentationByUserRole(String pilotRole, String token) {
+  private RoleRepresentationDTO findRealmRoleRepresentationByRoleName(String pilotRole, String token) {
     try {
       // Set Headers
       HttpHeaders headers = new HttpHeaders();
@@ -587,13 +633,9 @@ public class UserManagerService implements IUserManagerService {
           HttpMethod.GET, entity, new ParameterizedTypeReference<>() {});
 
       // Parse Response
-      return Optional.ofNullable(response)
-          .filter(resp -> resp.getStatusCode().is2xxSuccessful())
-          .map(ResponseEntity::getBody)
-          .map(body -> body.stream()
-              .filter(role -> role.getName().equals(pilotRole))
-              .findFirst()
-              .orElse(null))
+      return Optional.ofNullable(response).filter(resp -> resp.getStatusCode().is2xxSuccessful())
+          .map(ResponseEntity::getBody).map(body -> body.stream()
+              .filter(role -> role.getName().equals(pilotRole)).findFirst().orElse(null))
           .orElse(null);
     } catch (HttpClientErrorException | HttpServerErrorException e) {
       log.error("HTTP error during retrieving realm roles : {}, Response body: {}", e.getMessage(),
@@ -606,98 +648,114 @@ public class UserManagerService implements IUserManagerService {
   }
 
   /**
-   * Assign async the realm-management roles to implement additional functionality per user
+   * Assign realm-management roles to enable users access resources of Keycloak
    *
    * @param pilotRole : Realm Role
    * @param userId : ID of user
-   * @return Void
+   * @param token : JWT Token
+   * @return True on Success, False on Error
    */
-  @Async("asyncPoolTaskExecutor")
   @Override
-  public CompletableFuture<Void> assignRealmManagementRoles(String pilotRole, String userId,
-      String token) {
-    return CompletableFuture.runAsync(() -> {
-      try {
-        // Locate client's id
-        String clientID = keycloakSupportService.retrieveClientId(token, "realm-management");
-        if (clientID == null)
-          return;
+  public boolean assignRealmManagementRoles(String pilotRole, String userId, String token) {
+    try {
+      // Locate the User
+      UserRepresentationDTO user = retrieveUserById(userId, token);
+      if (user == null)
+        return false;
 
-        List<RoleRepresentationDTO> realmManagementRoles = findRealmManagementRoleRepresentationDependingOnPilotRole(pilotRole, clientID, token);
-        if (realmManagementRoles.isEmpty()) {
-          return;
-        }
+      // Delete old realm roles if available
+      if (!deleteUserRoleMappingsByClient(user, REALM_MANAGEMENT_CLIENT, token))
+        return false;
 
-        // Set Headers
-        HttpHeaders headers = new HttpHeaders();
-        headers.setBearerAuth(token);
-        headers.setContentType(MediaType.APPLICATION_JSON);
+      // Locate client's id
+      String clientID = keycloakSupportService.retrieveClientId(token, REALM_MANAGEMENT_CLIENT);
+      if (clientID == null)
+        return false;
 
-        HttpEntity<List<RoleRepresentationDTO>> entity =
-            new HttpEntity<>(realmManagementRoles, headers);
-
-        String requestUri = adminUri.concat(userPath).concat("/").concat(userId)
-            .concat("/role-mappings/clients/").concat(clientID);
-        ResponseEntity<Object> response =
-            restTemplate.exchange(requestUri, HttpMethod.POST, entity, Object.class);
-
-        if (!response.getStatusCode().is2xxSuccessful())
-          log.error("Unable to set realm-management roles to specific user");
-      } catch (HttpClientErrorException | HttpServerErrorException e) {
-        log.error("HTTP error during retrieving realm management roles : {}, Response body: {}",
-            e.getMessage(), e.getResponseBodyAsString(), e);
-        throw new KeycloakException("HTTP error during retrieving realm management roles", e);
-      } catch (RestClientException e) {
-        log.error("Error during retrieving realm management roles : {}", e.getMessage(), e);
-        throw new KeycloakException("Error during retrieving realm management roles", e);
+      List<RoleRepresentationDTO> realmManagementRoles =
+          findRealmManagementRoleRepresentationDependingOnPilotRole(pilotRole, clientID, token);
+      if (realmManagementRoles.isEmpty()) {
+        return false;
       }
-    });
+
+      // Set Headers
+      HttpHeaders headers = new HttpHeaders();
+      headers.setBearerAuth(token);
+      headers.setContentType(MediaType.APPLICATION_JSON);
+
+      HttpEntity<List<RoleRepresentationDTO>> entity =
+          new HttpEntity<>(realmManagementRoles, headers);
+
+      String requestUri = adminUri.concat(userPath).concat("/").concat(userId)
+          .concat("/role-mappings/clients/").concat(clientID);
+      ResponseEntity<Object> response =
+          restTemplate.exchange(requestUri, HttpMethod.POST, entity, Object.class);
+
+      return response.getStatusCode().is2xxSuccessful();
+    } catch (HttpClientErrorException | HttpServerErrorException e) {
+      log.error("HTTP error during retrieving realm management roles : {}, Response body: {}",
+          e.getMessage(), e.getResponseBodyAsString(), e);
+      throw new KeycloakException("HTTP error during retrieving realm management roles", e);
+    } catch (RestClientException e) {
+      log.error("Error during retrieving realm management roles : {}", e.getMessage(), e);
+      throw new KeycloakException("Error during retrieving realm management roles", e);
+    }
   }
 
   /**
-   * Assign async the client role to newly created user
+   * Assign a client role to a user
    * 
    * @param userRole : Client Role
    * @param userId : ID of user
-   * @return Void
+   * @param token : JWT Token
+   * @return True on Success, False on Error
    */
-  @Async("asyncPoolTaskExecutor")
   @Override
-  public CompletableFuture<Void> assignClientRole(String userRole, String userId, String token) {
-    return CompletableFuture.runAsync(() -> {
-      try {
-         // Locate client's id
-         String clientID = keycloakSupportService.getClientId();
-         if (clientID == null)
-          return;
+  public boolean assignClientRole(String userRole, String userId, String token) {
+    try {
+      // Locate the User
+      UserRepresentationDTO user = retrieveUserById(userId, token);
+      if (user == null)
+        return false;
 
-         // Locate client role representation
-        RoleRepresentationDTO clientRole = keycloakSupportService.findRoleRepresentationByName(userRole, clientID, token);
-        if (clientRole == null) {
-          return;
-        }
- 
-         // Set Headers
-         HttpHeaders headers = new HttpHeaders();
-         headers.setBearerAuth(token);
-         headers.setContentType(MediaType.APPLICATION_JSON);
- 
-         HttpEntity<List<RoleRepresentationDTO>> entity =new HttpEntity<>(List.of(clientRole), headers);
- 
-         String requestUri = adminUri.concat(userPath).concat("/").concat(userId).concat("/role-mappings/clients/").concat(clientID);
-         ResponseEntity<Object> response =restTemplate.exchange(requestUri, HttpMethod.POST, entity, Object.class);
- 
-         if (!response.getStatusCode().is2xxSuccessful())
-           log.error("Unable to set client role to specific user");
+      // Delete old realm roles if available
+      if (!deleteUserRoleMappingsByClient(user, clientName, token))
+        return false;
 
-      } catch (HttpClientErrorException | HttpServerErrorException e) {
-        log.error("HTTP error during retrieving client roles : {}, Response body: {}", e.getMessage(), e.getResponseBodyAsString(), e);
-        throw new KeycloakException("HTTP error during retrieving client roles", e);
-      } catch (RestClientException e) {
-        log.error("Error during retrieving client roles : {}", e.getMessage(), e);
-        throw new KeycloakException("Error during retrieving client roles", e);
+      // Locate client's id
+      String clientID = keycloakSupportService.getClientId();
+      if (clientID == null)
+        return false;
+
+      // Locate client role representation
+      RoleRepresentationDTO clientRole =
+          keycloakSupportService.findRoleRepresentationByNameAndClient(userRole, clientID, token);
+      if (clientRole == null) {
+        return false;
       }
-    });
+
+      // Set Headers
+      HttpHeaders headers = new HttpHeaders();
+      headers.setBearerAuth(token);
+      headers.setContentType(MediaType.APPLICATION_JSON);
+
+      HttpEntity<List<RoleRepresentationDTO>> entity =
+          new HttpEntity<>(List.of(clientRole), headers);
+
+      String requestUri = adminUri.concat(userPath).concat("/").concat(userId)
+          .concat("/role-mappings/clients/").concat(clientID);
+      ResponseEntity<Object> response =
+          restTemplate.exchange(requestUri, HttpMethod.POST, entity, Object.class);
+
+      return response.getStatusCode().is2xxSuccessful();
+    } catch (HttpClientErrorException | HttpServerErrorException e) {
+      log.error("HTTP error during retrieving client roles : {}, Response body: {}", e.getMessage(),
+          e.getResponseBodyAsString(), e);
+      throw new KeycloakException("HTTP error during retrieving client roles", e);
+    } catch (RestClientException e) {
+      log.error("Error during retrieving client roles : {}", e.getMessage(), e);
+      throw new KeycloakException("Error during retrieving client roles", e);
+    }
   }
 
   /**
@@ -763,13 +821,10 @@ public class UserManagerService implements IUserManagerService {
           HttpMethod.GET, entity, new ParameterizedTypeReference<>() {});
 
       // Parse Response
-      return Optional.ofNullable(response)
-        .filter(resp -> resp.getStatusCode().is2xxSuccessful())
-        .map(ResponseEntity::getBody)
-        .map(body -> body.stream()
-              .map(UserRepresentationDTO::toUserDTO)
-              .toList())
-        .orElse(Collections.emptyList());
+      return Optional.ofNullable(response).filter(resp -> resp.getStatusCode().is2xxSuccessful())
+          .map(ResponseEntity::getBody)
+          .map(body -> body.stream().map(UserRepresentationDTO::toUserDTO).toList())
+          .orElse(Collections.emptyList());
     } catch (HttpClientErrorException | HttpServerErrorException e) {
       log.error("HTTP error during retrieval of user per role : {}, Response body: {}",
           e.getMessage(), e.getResponseBodyAsString(), e);
@@ -806,13 +861,10 @@ public class UserManagerService implements IUserManagerService {
           HttpMethod.GET, entity, new ParameterizedTypeReference<>() {});
 
       // Parse Response
-      return Optional.ofNullable(response)
-              .filter(resp -> resp.getStatusCode().is2xxSuccessful())
-              .map(ResponseEntity::getBody)
-              .map(body -> body.stream()
-                    .map(UserRepresentationDTO::toUserDTO)
-                    .toList())
-              .orElse(Collections.emptyList());
+      return Optional.ofNullable(response).filter(resp -> resp.getStatusCode().is2xxSuccessful())
+          .map(ResponseEntity::getBody)
+          .map(body -> body.stream().map(UserRepresentationDTO::toUserDTO).toList())
+          .orElse(Collections.emptyList());
     } catch (HttpClientErrorException | HttpServerErrorException e) {
       log.error("HTTP error retrieval of user per pilot : {}, Response body: {}", e.getMessage(),
           e.getResponseBodyAsString(), e);
@@ -937,11 +989,11 @@ public class UserManagerService implements IUserManagerService {
 
     // Validate that user contains reset token field
     if (existingUser.getAttributes() == null
-            || !existingUser.getAttributes().containsKey(RESET_TOKEN)
-            || !existingUser.getAttributes().get(RESET_TOKEN).getFirst().equals(resetToken))
+        || !existingUser.getAttributes().containsKey(RESET_TOKEN)
+        || !existingUser.getAttributes().get(RESET_TOKEN).getFirst().equals(resetToken))
       // If any condition is not met, throw an exception
       throw new InvalidResetTokenAttributesException(
-              "Reset token is wrong or there is no reset token for specific user. Please contact the admin of your organization");
+          "Reset token is wrong or there is no reset token for specific user. Please contact the admin of your organization");
 
     // Update user's password
     UserDTO user = new UserDTO();
@@ -969,24 +1021,25 @@ public class UserManagerService implements IUserManagerService {
 
       HttpEntity<Void> entity = new HttpEntity<>(headers);
 
-      String requestUri = adminUri.concat("/clients/").concat(realmManagementClientID).concat("/roles");
+      String requestUri =
+          adminUri.concat("/clients/").concat(realmManagementClientID).concat("/roles");
       ResponseEntity<List<RoleRepresentationDTO>> response = restTemplate.exchange(requestUri,
           HttpMethod.GET, entity, new ParameterizedTypeReference<>() {});
 
       // Assign realm roles according to the Realm Role of User
       if (response.getStatusCode().is2xxSuccessful() && response.getBody() != null
           && !response.getBody().isEmpty()) {
-        if (pilotRole.equals(PilotRole.SUPER_ADMIN.toString()))
+        if (pilotRole.equalsIgnoreCase(PilotRole.SUPER_ADMIN.toString()))
           return response.getBody().stream()
               .filter(role -> SUPER_ADMIN_ROLES_MANAGEMENT_ARRAY.stream()
                   .anyMatch(superAdminRole -> superAdminRole.equalsIgnoreCase(role.getName())))
               .toList();
-        else if (pilotRole.equals(PilotRole.USER.toString()))
+        else if (pilotRole.equalsIgnoreCase(PilotRole.USER.toString()))
           return response.getBody().stream()
               .filter(role -> USER_ROLES_MANAGEMENT_ARRAY.stream().anyMatch(
                   pilotRoleManagement -> pilotRoleManagement.equalsIgnoreCase(role.getName())))
               .toList();
-        else if (pilotRole.equals(PilotRole.ADMIN.toString()))
+        else if (pilotRole.equalsIgnoreCase(PilotRole.ADMIN.toString()))
           return response.getBody().stream()
               .filter(role -> ADMIN_ROLES_MANAGEMENT_ARRAY.stream().anyMatch(
                   pilotRoleManagement -> pilotRoleManagement.equalsIgnoreCase(role.getName())))
@@ -1003,6 +1056,81 @@ public class UserManagerService implements IUserManagerService {
     } catch (RestClientException e) {
       log.error("Error during retrieving realm roles : {}", e.getMessage(), e);
       throw new KeycloakException("Error during retrieving realm roles", e);
+    }
+  }
+
+  /**
+   * Delete User's Role Mappings for a Specified Client
+   * 
+   * @param existingUser : User Representation in Keycloak
+   * @param client : Client Name
+   * @token : JWT Token Value
+   * @return True on Success, False on Error
+   */
+  private boolean deleteUserRoleMappingsByClient(UserRepresentationDTO existingUser, String client,
+      String token) {
+    try {
+      // Retrieve Client ID
+      String clientID = keycloakSupportService.retrieveClientId(token, client);
+      if (clientID == null)
+        return false;
+
+      // Set Headers
+      HttpHeaders headers = new HttpHeaders();
+      headers.setBearerAuth(token);
+      headers.setContentType(MediaType.APPLICATION_JSON);
+
+      HttpEntity<Void> entity = new HttpEntity<>(headers);
+
+      String requestUri = adminUri.concat(userPath).concat("/").concat(existingUser.getId())
+          .concat("/role-mappings/clients/").concat(clientID);
+      ResponseEntity<Object> response =
+          restTemplate.exchange(requestUri, HttpMethod.DELETE, entity, Object.class);
+
+      // Return true if successful - Parse response
+      return Optional.ofNullable(response).filter(resp -> resp.getStatusCode().is2xxSuccessful())
+          .map(resp -> true).orElse(false);
+    } catch (HttpClientErrorException | HttpServerErrorException e) {
+      log.error("HTTP error during deleting user's role mappings : {}, Response body: {}",
+          e.getMessage(), e.getResponseBodyAsString(), e);
+      throw new KeycloakException("HTTP server error during deleting user's role mappings", e);
+    } catch (RestClientException e) {
+      log.error("Error during during deleting user's role mappings : {}", e.getMessage(), e);
+      throw new KeycloakException("Error during during deleting user's role mappings", e);
+    }
+  }
+
+  /**
+   * Delete User's Realm Role
+   * 
+   * @param existingUser : User Representation in Keycloak
+   * @param token : JWT Token Value
+   * @return True on Success, False on Error
+   */
+  private boolean deleteUserRealmRoles(UserRepresentationDTO existingUser, String token) {
+    try {
+      // Set Headers
+      HttpHeaders headers = new HttpHeaders();
+      headers.setBearerAuth(token);
+      headers.setContentType(MediaType.APPLICATION_JSON);
+
+      HttpEntity<Void> entity = new HttpEntity<>(headers);
+
+      String requestUri = adminUri.concat(userPath).concat("/").concat(existingUser.getId())
+          .concat("/role-mappings/realm");
+      ResponseEntity<Object> response =
+          restTemplate.exchange(requestUri, HttpMethod.DELETE, entity, Object.class);
+
+      // Return true if successful - Parse response
+      return Optional.ofNullable(response).filter(resp -> resp.getStatusCode().is2xxSuccessful())
+          .map(resp -> true).orElse(false);
+    } catch (HttpClientErrorException | HttpServerErrorException e) {
+      log.error("HTTP error during deleting user's realm role : {}, Response body: {}",
+          e.getMessage(), e.getResponseBodyAsString(), e);
+      throw new KeycloakException("HTTP error during deleting user's realm role", e);
+    } catch (RestClientException e) {
+      log.error("Error during during deleting user's realm role : {}", e.getMessage(), e);
+      throw new KeycloakException("Error during during deleting user's realm role", e);
     }
   }
 }

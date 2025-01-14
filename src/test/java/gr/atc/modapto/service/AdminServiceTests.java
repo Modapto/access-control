@@ -26,7 +26,6 @@ import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.verifyNoInteractions;
 import static org.mockito.Mockito.when;
 import org.mockito.junit.jupiter.MockitoExtension;
-import org.springframework.beans.factory.annotation.Value;
 import org.springframework.core.ParameterizedTypeReference;
 import org.springframework.http.HttpEntity;
 import org.springframework.http.HttpMethod;
@@ -295,7 +294,7 @@ class AdminServiceTests {
 
     // Mock keycloakSupportService behavior
     when(keycloakSupportService.getClientId()).thenReturn(mockClientId);
-    when(keycloakSupportService.findRoleRepresentationByName(roleName, mockClientId, mockToken))
+    when(keycloakSupportService.findRoleRepresentationByNameAndClient(roleName, mockClientId, mockToken))
         .thenReturn(mockRoleRepr);
 
     // When
@@ -307,7 +306,7 @@ class AdminServiceTests {
 
     // Verify service calls
     verify(keycloakSupportService, times(1)).getClientId();
-    verify(keycloakSupportService, times(1)).findRoleRepresentationByName(roleName, mockClientId,
+    verify(keycloakSupportService, times(1)).findRoleRepresentationByNameAndClient(roleName, mockClientId,
         mockToken);
   }
 
@@ -326,7 +325,7 @@ class AdminServiceTests {
 
     // Mock keycloakSupportService behavior
     when(keycloakSupportService.getClientId()).thenReturn(mockClientId);
-    when(keycloakSupportService.findRoleRepresentationByName(roleName, mockClientId, mockToken))
+    when(keycloakSupportService.findRoleRepresentationByNameAndClient(roleName, mockClientId, mockToken))
         .thenReturn(tempRoleRepr);
 
     // Mock restTemplate behavior
@@ -339,7 +338,7 @@ class AdminServiceTests {
     // Then
     assertTrue(response);
     verify(keycloakSupportService, times(1)).getClientId();
-    verify(keycloakSupportService, times(1)).findRoleRepresentationByName(roleName, mockClientId,
+    verify(keycloakSupportService, times(1)).findRoleRepresentationByNameAndClient(roleName, mockClientId,
         mockToken);
     verify(restTemplate, times(1)).exchange(eq(updateRoleRequestUri), eq(HttpMethod.PUT),
         any(HttpEntity.class), eq(Void.class));

@@ -1,9 +1,11 @@
 package gr.atc.modapto.dto.keycloak;
 
+import java.util.Collections;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.Optional;
+import java.util.stream.IntStream;
 
 import gr.atc.modapto.dto.UserRoleDTO;
 import gr.atc.modapto.enums.PilotCode;
@@ -94,4 +96,38 @@ public class RoleRepresentationDTO {
                 .pilotRole(roleRepresentationDTO.getAttributes() != null && roleRepresentationDTO.getAttributes().containsKey(PILOT_ROLE) && !roleRepresentationDTO.getAttributes().get(PILOT_ROLE).isEmpty() ? PilotRole.valueOf(roleRepresentationDTO.getAttributes().get(PILOT_ROLE).getFirst()) : null)
                 .build();
     }
+
+  /**
+   * Convert a RoleRepresentationDTO to a list of UserRoleDTO in case the same role has multiple
+   * pilot codes and pilot roles
+   *
+   * @param roleRepresentationDTO : RoleRepresentationDTO
+   * @return List<UserRoleDTO>
+   */
+  public static List<UserRoleDTO> fromRoleRepresentation(RoleRepresentationDTO roleRepresentationDTO) {
+    if (roleRepresentationDTO.getAttributes() != null && roleRepresentationDTO.getName() != null
+        && roleRepresentationDTO.getAttributes().containsKey(PILOT_CODE)
+        && !roleRepresentationDTO.getAttributes().get(PILOT_CODE).isEmpty()
+        && roleRepresentationDTO.getAttributes().containsKey(PILOT_ROLE)
+        && !roleRepresentationDTO.getAttributes().get(PILOT_ROLE).isEmpty()) {
+
+      List<String> pilotCodes = roleRepresentationDTO.getAttributes().get(PILOT_CODE);
+      List<String> pilotRoles = roleRepresentationDTO.getAttributes().get(PILOT_ROLE);
+      
+      // Validate that Lists are not empty
+      if (pilotCodes.isEmpty() && pilotRoles.isEmpty() && pilotCodes.size() != pilotRoles.size())
+          return Collections.emptyList();
+
+      return IntStream.range(0, pilotCodes.size())
+          .mapToObj(index -> UserRoleDTO.builder()
+            .id(roleRepresentationDTO.getId())
+            .name(roleRepresentationDTO.getName())
+            .pilotCode(PilotCode.valueOf(pilotCodes.get(index)))
+            .pilotRole(PilotRole.valueOf(pilotRoles.get(index))).build())
+          .toList();
+    }
+
+    // Return an empty list if the attributes are not present and all values are present
+    return Collections.emptyList();
+  }
 }

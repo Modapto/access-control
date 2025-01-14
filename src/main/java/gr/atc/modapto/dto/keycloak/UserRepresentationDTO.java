@@ -96,14 +96,19 @@ public class UserRepresentationDTO {
     if (keycloakUser == null)
       return null;
 
-    return UserDTO.builder().userId(keycloakUser.getId()).email(keycloakUser.getEmail())
-        .firstName(keycloakUser.getFirstName()).lastName(keycloakUser.getLastName())
-        .username(keycloakUser.getUsername()).userRole(getAttributeValue(keycloakUser, USER_ROLE))
+    return UserDTO.builder().userId(keycloakUser.getId())
+        .email(keycloakUser.getEmail())
+        .firstName(keycloakUser.getFirstName())
+        .lastName(keycloakUser.getLastName())
+        .username(keycloakUser.getUsername())
+        .userRole(getAttributeValue(keycloakUser, USER_ROLE))
         .pilotCode(getPilotCodeAttribute(keycloakUser))
         .pilotRole(getPilotRoleAttribute(keycloakUser))
         .activationToken(getAttributeValue(keycloakUser, ACTIVATION_TOKEN))
         .activationExpiry(getAttributeValue(keycloakUser, ACTIVATION_EXPIRY))
-        .resetToken(getAttributeValue(keycloakUser, RESET_TOKEN)).tokenFlagRaised(false).build();
+        .resetToken(getAttributeValue(keycloakUser, RESET_TOKEN))
+        .tokenFlagRaised(false)
+        .build();
   }
 
   private static String getAttributeValue(UserRepresentationDTO user, String key) {

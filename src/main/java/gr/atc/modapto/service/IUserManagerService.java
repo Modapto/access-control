@@ -28,11 +28,13 @@ public interface IUserManagerService {
 
   UserRepresentationDTO retrieveUserById(String userId, String token);
 
-  CompletableFuture<Void> assignRealmRoles(String userRole, String userId, String token);
+  CompletableFuture<Void> assignRolesToUser(UserDTO newUserDetails, UserDTO existingUserDetails, String userId, String token);
 
-  CompletableFuture<Void> assignRealmManagementRoles(String userRole, String userId, String token);
+  boolean assignRealmRoles(String userRole, String userId, String token);
 
-  CompletableFuture<Void> assignClientRole(String userRole, String userId, String token);
+  boolean assignRealmManagementRoles(String userRole, String userId, String token);
+
+  boolean assignClientRole(String userRole, String userId, String token);
 
   CompletableFuture<Void> logoutUser(String userId, String token);
 

@@ -215,11 +215,7 @@ class UserManagerControllerTests {
     completableFuture.complete(null);
     given(userManagerService.retrieveUserByEmail(anyString(), anyString())).willReturn(null);
     given(userManagerService.createUser(any(UserDTO.class), anyString())).willReturn("12345");
-    given(userManagerService.assignRealmRoles(anyString(), anyString(), anyString()))
-        .willReturn(completableFuture);
-    given(userManagerService.assignClientRole(anyString(), anyString(), anyString()))
-        .willReturn(completableFuture);
-    given(userManagerService.assignRealmManagementRoles(anyString(), anyString(), anyString()))
+    given(userManagerService.assignRolesToUser(any(UserDTO.class), any(UserDTO.class), anyString(), anyString()))
         .willReturn(completableFuture);
 
     // Mock JWT authentication

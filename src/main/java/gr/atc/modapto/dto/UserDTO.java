@@ -1,5 +1,6 @@
 package gr.atc.modapto.dto;
 
+import com.fasterxml.jackson.annotation.JsonIgnore;
 import com.fasterxml.jackson.annotation.JsonInclude;
 import com.fasterxml.jackson.annotation.JsonProperty;
 
@@ -55,17 +56,21 @@ public class UserDTO {
 
     @Null
     @JsonProperty("activationToken")
+    @JsonIgnore
     private String activationToken;
 
     @Null
     @JsonProperty("activationExpiry")
+    @JsonIgnore
     private String activationExpiry;
 
     @Null
     @JsonProperty("resetToken")
+    @JsonIgnore
     private String resetToken;
 
     @Null
     @JsonProperty("tokenFlag")
+    @JsonIgnore
     private boolean tokenFlagRaised;
 }

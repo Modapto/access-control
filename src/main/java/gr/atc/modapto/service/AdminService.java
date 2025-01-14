@@ -273,7 +273,7 @@ public class AdminService implements IAdminService {
      */
     @Override
     public UserRoleDTO retrieveUserRole(String tokenValue, String roleName) {
-        RoleRepresentationDTO existingRole = keycloakSupportService.findRoleRepresentationByName(roleName, keycloakSupportService.getClientId(), tokenValue);
+        RoleRepresentationDTO existingRole = keycloakSupportService.findRoleRepresentationByNameAndClient(roleName, keycloakSupportService.getClientId(), tokenValue);
         if (existingRole == null)
             throw new DataRetrievalException(ROLE_NOT_FOUND_MESSAGE);
         return RoleRepresentationDTO.toUserRoleDTO(existingRole);
@@ -351,7 +351,7 @@ public class AdminService implements IAdminService {
             throw new DataRetrievalException(CLIENT_NOT_FOUND_MESSAGE);
 
         // Try locating the RoleRepresentation
-        RoleRepresentationDTO existingRole = keycloakSupportService.findRoleRepresentationByName(existingRoleName, clientId, tokenValue);
+        RoleRepresentationDTO existingRole = keycloakSupportService.findRoleRepresentationByNameAndClient(existingRoleName, clientId, tokenValue);
         if (existingRole == null)
             throw new DataRetrievalException(ROLE_NOT_FOUND_MESSAGE);
 
@@ -501,7 +501,7 @@ public class AdminService implements IAdminService {
             throw new DataRetrievalException(GROUP_NOT_FOUND_MESSAGE);
 
         // Retrieve Role Representation by Name
-        RoleRepresentationDTO roleRepr = keycloakSupportService.findRoleRepresentationByName(userRole, clientId, token);
+        RoleRepresentationDTO roleRepr = keycloakSupportService.findRoleRepresentationByNameAndClient(userRole, clientId, token);
         if (roleRepr == null)
             throw new DataRetrievalException(ROLE_NOT_FOUND_MESSAGE);
 

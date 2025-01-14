@@ -227,7 +227,7 @@ public class KeycloakSupportService {
      * @param token : JWT Token value
      * @return RoleRepresentationDTO : Role Representation
      */
-    public RoleRepresentationDTO findRoleRepresentationByName(String userRole, String clientId, String token) {
+    public RoleRepresentationDTO findRoleRepresentationByNameAndClient(String userRole, String clientId, String token) {
         // Set Headers
         HttpHeaders headers = new HttpHeaders();
         headers.setBearerAuth(token);

@@ -18,6 +18,7 @@ import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
 import static org.mockito.ArgumentMatchers.any;
+import static org.mockito.ArgumentMatchers.anyString;
 import static org.mockito.ArgumentMatchers.eq;
 import org.mockito.InjectMocks;
 import org.mockito.Mock;
@@ -93,7 +94,7 @@ class UserManagerServiceTests {
 
     ReflectionTestUtils.setField(userManagerService, "adminUri", MOCK_ADMIN_URI);
     ReflectionTestUtils.setField(userManagerService, "tokenUri", MOCK_TOKEN_URI);
-    ReflectionTestUtils.setField(userManagerService, "clientId", MOCK_CLIENT_ID);
+    ReflectionTestUtils.setField(userManagerService, "clientName", MOCK_CLIENT_ID);
     ReflectionTestUtils.setField(userManagerService, "clientSecret", MOCK_CLIENT_SECRET);
     ReflectionTestUtils.setField(userManagerService, "restTemplate", restTemplate);
     ReflectionTestUtils.setField(userManagerService, "userPath", "/userPath");
@@ -441,21 +442,43 @@ class UserManagerServiceTests {
     RoleRepresentationDTO roleRepresentationDTO = new RoleRepresentationDTO();
     roleRepresentationDTO.setName(pilotRole);
 
-    when(restTemplate.exchange(eq(MOCK_ADMIN_URI + "/roles"), eq(HttpMethod.GET),
-        any(HttpEntity.class), any(ParameterizedTypeReference.class)))
-            .thenReturn(new ResponseEntity<>(List.of(roleRepresentationDTO), HttpStatus.OK));
+    // Mock retrieveUserById
+    when(restTemplate.exchange(
+        eq(MOCK_ADMIN_URI + "/userPath/" + userId),
+        eq(HttpMethod.GET),
+        any(HttpEntity.class),
+        eq(UserRepresentationDTO.class)
+    )).thenReturn(new ResponseEntity<>(userRepresentation, HttpStatus.OK));
 
-    when(restTemplate.exchange(eq(MOCK_ADMIN_URI + "/userPath/" + userId + "/role-mappings/realm"),
-        eq(HttpMethod.POST), any(HttpEntity.class), eq(Object.class)))
-            .thenReturn(new ResponseEntity<>(null, HttpStatus.NO_CONTENT));
+    // Mock deleteUserRealmRoles
+    when(restTemplate.exchange(
+        eq(MOCK_ADMIN_URI + "/userPath/" + userId + "/role-mappings/realm"),
+        eq(HttpMethod.DELETE),
+        any(HttpEntity.class),
+        eq(Object.class)
+    )).thenReturn(new ResponseEntity<>(HttpStatus.NO_CONTENT));
+
+    // Mock findRoleRepresentationByUserRole
+    when(restTemplate.exchange(
+        eq(MOCK_ADMIN_URI + "/roles"),
+        eq(HttpMethod.GET),
+        any(HttpEntity.class),
+        any(ParameterizedTypeReference.class)
+    )).thenReturn(new ResponseEntity<>(List.of(roleRepresentationDTO), HttpStatus.OK));
+
+    // Mock role assignment
+    when(restTemplate.exchange(
+        eq(MOCK_ADMIN_URI + "/userPath/" + userId + "/role-mappings/realm"),
+        eq(HttpMethod.POST),
+        any(HttpEntity.class),
+        eq(Object.class)
+    )).thenReturn(new ResponseEntity<>(HttpStatus.NO_CONTENT));
 
     // When
-    CompletableFuture<Void> result =
-        userManagerService.assignRealmRoles(pilotRole, userId, MOCK_TOKEN);
+    boolean result = userManagerService.assignRealmRoles(pilotRole, userId, MOCK_TOKEN);
 
     // Then
-    assertNotNull(result);
-    assertDoesNotThrow(() -> result.get());
+    assertTrue(result);
   }
 
   @DisplayName("Assign realm management roles: Success")
@@ -463,7 +486,7 @@ class UserManagerServiceTests {
   @Test
   void givenPilotRoleAndUserId_whenAssignRealmManagementRoles_thenCompleteSuccessfully() {
     // Given
-    String pilotRole = "admin";
+    String pilotRole = "ADMIN";
     String userId = "123";
     String clientId = "realm-management-client-id";
 
@@ -472,6 +495,25 @@ class UserManagerServiceTests {
 
     ClientRepresentationDTO clientRepresentationDTO = new ClientRepresentationDTO();
     clientRepresentationDTO.setId(clientId);
+
+    // Mock Keycloak Support service
+    when(keycloakSupportService.retrieveClientId(anyString(), anyString())).thenReturn(clientId);
+
+    // Mock retrieveUserById
+    when(restTemplate.exchange(
+        eq(MOCK_ADMIN_URI + "/userPath/" + userId),
+        eq(HttpMethod.GET),
+        any(HttpEntity.class),
+        eq(UserRepresentationDTO.class)
+    )).thenReturn(new ResponseEntity<>(userRepresentation, HttpStatus.OK));
+
+    // Mock deleteUserRealmRoles
+    when(restTemplate.exchange(
+        eq(MOCK_ADMIN_URI + "/userPath/" + userId + "/role-mappings/clients/" + clientId),
+        eq(HttpMethod.DELETE),
+        any(HttpEntity.class),
+        eq(Object.class)
+    )).thenReturn(new ResponseEntity<>(HttpStatus.NO_CONTENT));
 
     Mockito.lenient()
         .when(restTemplate.exchange(eq(MOCK_ADMIN_URI + "/clients?clientId=realm-management"),
@@ -485,17 +527,16 @@ class UserManagerServiceTests {
 
     Mockito.lenient()
         .when(restTemplate.exchange(
-            eq(MOCK_ADMIN_URI + "/users/" + userId + "/role-mappings/clients/" + clientId),
+            eq(MOCK_ADMIN_URI + "/userPath/" + userId + "/role-mappings/clients/" + clientId),
             eq(HttpMethod.POST), any(HttpEntity.class), eq(Object.class)))
         .thenReturn(new ResponseEntity<>(null, HttpStatus.NO_CONTENT));
 
     // When
-    CompletableFuture<Void> result =
+   boolean result =
         userManagerService.assignRealmManagementRoles(pilotRole, userId, MOCK_TOKEN);
 
     // Then
-    assertNotNull(result);
-    assertDoesNotThrow(() -> result.get());
+    assertTrue(result);
   }
 
   @DisplayName("Fetch user by email: Success")

@@ -2,7 +2,6 @@ package gr.atc.modapto.controller;
 
 import java.util.List;
 import java.util.UUID;
-import java.util.concurrent.CompletableFuture;
 
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
@@ -256,7 +255,7 @@ public class UserManagerController {
     String userId = userManagerService.createUser(user, token);
     if (userId != null) {
       // Assign the essential roles to the User Asynchronously
-      assignRolesToUser(user.getPilotRole().toString(), user.getUserRole(), userId, token);
+      userManagerService.assignRolesToUser(user, null, userId, token);
 
       // Send activation link async
       String activationToken = userId.concat("@").concat(user.getActivationToken()); // Token in activation Link will be: User ID + @ + Activation Token
@@ -327,12 +326,15 @@ public class UserManagerController {
           BaseResponse
               .error("User of type 'ADMIN' can only update user's inside their organization"),
           HttpStatus.FORBIDDEN);
-
+    
+    String token = jwt.getTokenValue();
     // Update users
-    if (userManagerService.updateUser(user, userId, jwt.getTokenValue()))
+    if (userManagerService.updateUser(user, userId, token)){
+      // Assign the essential roles to the User Asynchronously after the Update
+      userManagerService.assignRolesToUser(user, existingUserDTO, userId, token);
       return new ResponseEntity<>(BaseResponse.success(null, "User updated successfully"),
           HttpStatus.OK);
-    else
+    } else
       return new ResponseEntity<>(BaseResponse.error("Unable to update user in Keycloak"),
           HttpStatus.INTERNAL_SERVER_ERROR);
   }
@@ -608,34 +610,4 @@ public class UserManagerController {
         || user.getLastName() == null || user.getUserRole() == null || user.getPilotRole() == null
         || user.getPilotCode() == null);
   }
-
-  /**
-   * Call async functions to assign roles to user
-   * 
-   * @param userRole : Created user role
-   * @param userId : User ID
-   * @param token : JWT Token value
-   */
-  private void assignRolesToUser(String pilotRole, String userRole, String userId, String token) {
-    // Trigger async role assignments
-    // Assign Realm Role
-    CompletableFuture<Void> realmRolesFuture =
-        userManagerService.assignRealmRoles(pilotRole, userId, token);
-
-    // Assign Client Role
-    CompletableFuture<Void> clientRoleFuture =
-        userManagerService.assignClientRole(userRole, userId, token);
-
-    // Assign Realm-Management Roles
-    CompletableFuture<Void> managementRolesFuture =
-        userManagerService.assignRealmManagementRoles(pilotRole, userId, token);
-
-    // Wait for both futures to complete
-    CompletableFuture.allOf(realmRolesFuture, managementRolesFuture, clientRoleFuture)
-        .thenRun(() -> log.info("All roles assigned for user: {}", userId)).exceptionally(ex -> {
-          log.error("Error assigning roles for user: {}", userId, ex);
-          return null;
-        });
-  }
-
 }
