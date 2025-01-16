@@ -7,9 +7,21 @@ on:
     branches: [ "main" ]
 
 jobs:
-  build-image:
+  build-and-push-image:
     runs-on: ubuntu-latest
     steps:
-    - uses: actions/checkout@v4
+    - name: Check out repository
+      uses: actions/checkout@v4
+
+    - name: Log in to GitHub Container Registry
+      uses: docker/login-action@v2
+      with:
+        registry: ghcr.io
+        username: ${{ github.actor }}
+        password: ${{ secrets.GITHUB_TOKEN }}
+
     - name: Build the Docker image
-      run: docker build . --file Dockerfile --tag ghcr.io/modapto/access-control:latest
+      run: docker build . --file Dockerfile --tag ghcr.io/modapto/user-manager:latest
+
+    - name: Push the Docker image
+      run: docker push ghcr.io/modapto/user-manager:latest
