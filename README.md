@@ -1,4 +1,4 @@
-# modapto-user-manager
+# MODAPTO User Manager Component
 
 ## Overview
 
