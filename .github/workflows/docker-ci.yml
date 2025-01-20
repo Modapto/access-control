@@ -1,5 +1,8 @@
 name: Docker Image CI - Access Control
 
+env:
+  DOCKER_IMAGE: user-manager
+
 on:
   push:
     branches: [ "main" ]
@@ -28,7 +31,7 @@ jobs:
         password: ${{ secrets.CI_TOKEN }}
 
     - name: Build the Docker image
-      run: docker build . --file Dockerfile --tag ghcr.io/modapto/user-manager:latest
+      run: docker build . --file Dockerfile --tag ghcr.io/modapto/${{ env.DOCKER_IMAGE }}:latest
 
     - name: Push the Docker image
-      run: docker push ghcr.io/modapto/user-manager:latest
+      run: docker push ghcr.io/modapto/${{ env.DOCKER_IMAGE }}:latest
