@@ -542,8 +542,10 @@ class UserManagerControllerTests {
   @DisplayName("Delete User: Success")
   @Test
   void givenValidJwt_whenDeleteUser_thenReturnSuccess() throws Exception {
+    UserDTO existingUser = UserDTO.builder().userId("12345").build();
     // Given
     given(userManagerService.deleteUser(anyString(), anyString())).willReturn(true);
+    given(userManagerService.fetchUser(anyString(), anyString())).willReturn(existingUser);
 
     // Mock JWT authentication
     JwtAuthenticationToken jwtAuthenticationToken =
@@ -561,8 +563,10 @@ class UserManagerControllerTests {
   @DisplayName("Delete User: Failure")
   @Test
   void givenValidJwt_whenDeleteUserFails_thenReturnServerError() throws Exception {
+    UserDTO existingUser = UserDTO.builder().userId("12345").build();
     // Given
     given(userManagerService.deleteUser(anyString(), anyString())).willReturn(false);
+    given(userManagerService.fetchUser(anyString(), anyString())).willReturn(existingUser);
 
     // Mock JWT authentication
     JwtAuthenticationToken jwtAuthenticationToken =

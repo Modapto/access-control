@@ -509,11 +509,28 @@ public class UserManagerController {
       @ApiResponse(responseCode = "400", description = "An unexpected error occured"),
       @ApiResponse(responseCode = "403",
           description = "Invalid authorization parameters. Check JWT or CSRF Token"),
+      @ApiResponse(responseCode = "403", description = "Unauthorized action. Admin users can only delete people inside their organization"),
+      @ApiResponse(responseCode = "409", description = "User not found in Keycloak"),
       @ApiResponse(responseCode = "500", description = "Unable to delete user from Keycloak")})
-  @PreAuthorize("hasAuthority('ROLE_SUPER_ADMIN')")
+  @PreAuthorize("hasAnyAuthority('ROLE_SUPER_ADMIN', 'ROLE_ADMIN')")
   @DeleteMapping("/delete")
   public ResponseEntity<BaseResponse<String>> deleteUser(@RequestParam String userId,
       @AuthenticationPrincipal Jwt jwt) {
+    String pilot = JwtUtils.extractPilotCode(jwt);
+    String pilotRole = JwtUtils.extractPilotRole(jwt);
+
+    // Try locate user
+    UserDTO existingUser = userManagerService.fetchUser(userId,jwt.getTokenValue());
+    if (existingUser == null)
+      return new ResponseEntity<>(BaseResponse.error("User not found in Keycloak"),
+          HttpStatus.CONFLICT);
+
+    // Validate that ADMIN users can only delete Users inside their plant
+    if (pilotRole.equalsIgnoreCase(PilotRole.ADMIN.toString()) && !pilot.equalsIgnoreCase(existingUser.getPilotCode().toString()))
+      return new ResponseEntity<>(BaseResponse.error("Unauthorized action. Admin users can only delete people inside their organization"),
+          HttpStatus.FORBIDDEN);
+
+    // Delete the User
     if (userManagerService.deleteUser(userId, jwt.getTokenValue()))
       return new ResponseEntity<>(BaseResponse.success(null, "User deleted successfully"),
           HttpStatus.OK);

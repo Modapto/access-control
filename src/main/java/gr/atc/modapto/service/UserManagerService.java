@@ -83,6 +83,7 @@ public class UserManagerService implements IUserManagerService {
   private static final String ERROR_MESSAGE_FIELD = "errorMessage";
 
   // Arrays of realm-manage roles
+  // Arrays of realm-manage roles
   private static final String REALM_MANAGEMENT_CLIENT = "realm-management";
   private static final String REALM_CLIENT = "realm";
   private static final String VIEW_USERS = "view-users";
@@ -106,7 +107,7 @@ public class UserManagerService implements IUserManagerService {
       List.of(QUERY_REALMS, MANAGE_REALM, MANAGE_CLIENTS, "realm-admin", MANAGE_USERS,
           QUERY_USERS, MANAGE_AUTHORIZATION, "view-identity-providers", VIEW_USERS, QUERY_CLIENTS,
           VIEW_CLIENTS, QUERY_GROUPS, "view-events", "view-authorization", VIEW_REALM);
-
+          
   public UserManagerService(KeycloakSupportService keycloakSupportService,
       IEmailService emailService) {
     this.keycloakSupportService = keycloakSupportService;
@@ -293,18 +294,19 @@ public class UserManagerService implements IUserManagerService {
       // Set Headers
       HttpHeaders headers = new HttpHeaders();
       headers.setBearerAuth(token);
-      headers.setContentType(MediaType.APPLICATION_JSON);
 
       HttpEntity<Void> entity = new HttpEntity<>(headers);
 
-      String requestUri = adminUri.concat("/users?id=").concat(userId);
-      ResponseEntity<List<UserRepresentationDTO>> response = restTemplate.exchange(requestUri,
-          HttpMethod.GET, entity, new ParameterizedTypeReference<>() {});
+      String requestUri = adminUri.concat("/users/").concat(userId);
+      ResponseEntity<UserRepresentationDTO> response = restTemplate.exchange(requestUri,
+          HttpMethod.GET, entity, UserRepresentationDTO.class);
 
       // Parse response
       return Optional.ofNullable(response).filter(resp -> resp.getStatusCode().is2xxSuccessful())
-          .map(ResponseEntity::getBody).filter(body -> body != null && !body.isEmpty())
-          .map(body -> body.getFirst()).map(UserRepresentationDTO::toUserDTO).orElse(null);
+          .map(ResponseEntity::getBody)
+          .filter(body -> body != null)
+          .map(UserRepresentationDTO::toUserDTO)
+          .orElse(null);
     } catch (HttpClientErrorException | HttpServerErrorException e) {
       log.error("HTTP error during retrieving specific user with id {} : {}, Response body: {}",
           userId, e.getMessage(), e.getResponseBodyAsString(), e);

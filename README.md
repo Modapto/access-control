@@ -176,7 +176,7 @@ Create an .env file to include the corresponding environmental variables.
 
 ## License
 
-TThis project has received funding from the European Union's Horizon 2022 research and innovation programm, under Grant Agreement 101091996.
+This project has received funding from the European Union's Horizon 2022 research and innovation programm, under Grant Agreement 101091996.
 
 For more details about the licence, see the [LICENSE](LICENSE) file.
 
