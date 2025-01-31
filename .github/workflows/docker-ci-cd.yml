@@ -56,3 +56,6 @@ jobs:
             cd /root/modapto/access-control
             docker compose pull ${{ env.DOCKER_IMAGE }}
             docker compose up -d --no-deps ${{ env.DOCKER_IMAGE }}
+
+            # Loggout
+            docker logout ghcr.io
