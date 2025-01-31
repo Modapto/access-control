@@ -1,4 +1,4 @@
-name: Docker Image CI - Access Control
+name: Docker Image CI/CD - Access Control
 
 env:
   DOCKER_IMAGE: user-manager
