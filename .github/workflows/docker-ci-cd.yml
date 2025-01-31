@@ -39,14 +39,7 @@ jobs:
   deploy:
     runs-on: ubuntu-latest
     needs: build-and-push-image
-    steps:
-      - name: Log in to GitHub Container Registry
-        uses: docker/login-action@v2
-        with:
-          registry: ghcr.io
-          username: ${{ github.actor }}
-          password: ${{ secrets.CI_TOKEN }}
-        
+    steps:      
       - name: SSH into VM and Deploy new Image with Docker
         uses: appleboy/ssh-action@v1.2.0
         with:
@@ -54,6 +47,12 @@ jobs:
           username:  ${{ secrets.VM_USER }}
           key: ${{ secrets.VM_SSH_KEY }}
           script: |
+            # Fail script on first error
+            set -e 
+            # Login to GitHub Container Registry
+            echo "${{ secrets.CI_TOKEN }}" | docker login ghcr.io -u ${{ github.actor }} --password-stdin
+            
+            # Deploy new Image
             cd /root/modapto/access-control
             docker compose pull ${{ env.DOCKER_IMAGE }}
             docker compose up -d --no-deps ${{ env.DOCKER_IMAGE }}
