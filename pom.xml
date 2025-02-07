@@ -10,7 +10,7 @@
 	</parent>
 	<groupId>gr.atc</groupId>
 	<artifactId>modapto-user-manager</artifactId>
-	<version>0.0.1-SNAPSHOT</version>
+	<version>0.5</version>
 	<name>modapto-user-manager</name>
 	<description>MODAPTO User and Identity Manager Service</description>
 	<inceptionYear>2024</inceptionYear>

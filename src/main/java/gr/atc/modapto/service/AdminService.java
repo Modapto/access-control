@@ -44,13 +44,16 @@ public class AdminService implements IAdminService {
     @Value("${keycloak.api.group-path:/groups}")
     private String groupPath;
 
+    @Value("${keycloak.default.realm.role}")
+    private String defaultRole;
+
     private final RestTemplate restTemplate = new RestTemplate();
 
     private final KeycloakSupportService keycloakSupportService;
 
     // Strings commonly used
-    private static final List<String> SUPER_ADMIN_EXCLUDED_ROLES = List.of("default-roles-modapto-dev", "uma_authorization", "offline_access");
-    private static final List<String> ADMIN_EXCLUDED_ROLES = List.of("default-roles-modapto-dev", "uma_authorization", "offline_access", "SUPER_ADMIN");
+    private final List<String> SUPER_ADMIN_EXCLUDED_ROLES = List.of(defaultRole, "uma_authorization", "offline_access");
+    private final List<String> ADMIN_EXCLUDED_ROLES = List.of(defaultRole, "uma_authorization", "offline_access", "SUPER_ADMIN");
     private static final String ROLE_NOT_FOUND_MESSAGE = "User Role not found in Keycloak";
     private static final String CLIENT_NOT_FOUND_MESSAGE = "Client not found in Keycloak";
     private static final String GROUP_NOT_FOUND_MESSAGE = "Group not found in Keycloak";

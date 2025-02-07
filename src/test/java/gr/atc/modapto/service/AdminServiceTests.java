@@ -75,7 +75,7 @@ class AdminServiceTests {
     List<RealmRoleDTO> mockRoles =
         Arrays.asList(new RealmRoleDTO("1", "ADMIN", null, false, false, null),
             new RealmRoleDTO("2", "USER", null, false, false, null),
-            new RealmRoleDTO("3", "default-roles-modapto-dev", null, false, false, null));
+            new RealmRoleDTO("3", "default-roles-modapto-system", null, false, false, null));
 
     ResponseEntity<List<RealmRoleDTO>> mockResponse =
         new ResponseEntity<>(mockRoles, HttpStatus.OK);
@@ -88,7 +88,7 @@ class AdminServiceTests {
     assertEquals(2, result.size());
     assertTrue(result.contains("ADMIN"));
     assertTrue(result.contains("USER"));
-    assertFalse(result.contains("default-roles-modapto-dev"));
+    assertFalse(result.contains("default-roles-modapto-system"));
   }
 
   @DisplayName("Retrieve all pilot roles: Empty Response - Fail")

@@ -1,9 +1,9 @@
 {
-  "openapi": "3.0.1",
+  "openapi": "3.0.3",
   "info": {
     "title": "User Manager API",
     "description": "API documentation for User Manager service",
-    "version": "1.0"
+    "version": "v0.5"
   },
   "servers": [
     {
@@ -57,10 +57,10 @@
                 "schema": {
                   "oneOf": [
                     {
-                      "$ref": "#/components/schemas/BaseResponseString"
+                      "$ref": "#/components/schemas/BaseResponseMapStringString"
                     },
                     {
-                      "$ref": "#/components/schemas/BaseResponseMapStringString"
+                      "$ref": "#/components/schemas/BaseResponseString"
                     }
                   ]
                 }
@@ -97,6 +97,16 @@
               }
             }
           },
+          "409": {
+            "description": "Conflict",
+            "content": {
+              "*/*": {
+                "schema": {
+                  "$ref": "#/components/schemas/BaseResponseString"
+                }
+              }
+            }
+          },
           "500": {
             "description": "Unable to update user in Keycloak",
             "content": {
@@ -115,6 +125,114 @@
         ]
       }
     },
+    "/api/users/reset-password": {
+      "put": {
+        "tags": [
+          "user-manager-controller"
+        ],
+        "summary": "Reset user's password functionality given a reset token",
+        "operationId": "resetPassword",
+        "parameters": [
+          {
+            "name": "token",
+            "in": "query",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "string"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "description": "Email sent successfully to user",
+            "content": {
+              "*/*": {
+                "schema": {
+                  "$ref": "#/components/schemas/BaseResponseString"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Validation Error",
+            "content": {
+              "*/*": {
+                "schema": {
+                  "oneOf": [
+                    {
+                      "$ref": "#/components/schemas/BaseResponseMapStringString"
+                    },
+                    {
+                      "$ref": "#/components/schemas/BaseResponseString"
+                    }
+                  ]
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Unauthorized",
+            "content": {
+              "*/*": {
+                "schema": {
+                  "$ref": "#/components/schemas/BaseResponseMapStringString"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "Reset token is wrong or there is no reset token for specific user. Please contact the admin of your organization",
+            "content": {
+              "*/*": {
+                "schema": {
+                  "$ref": "#/components/schemas/BaseResponseMapStringString"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "User with this ID not found in Keycloak",
+            "content": {
+              "*/*": {
+                "schema": {
+                  "$ref": "#/components/schemas/BaseResponseString"
+                }
+              }
+            }
+          },
+          "409": {
+            "description": "Conflict",
+            "content": {
+              "*/*": {
+                "schema": {
+                  "$ref": "#/components/schemas/BaseResponseString"
+                }
+              }
+            }
+          },
+          "500": {
+            "description": "Unable to reset user's password in Keycloak",
+            "content": {
+              "*/*": {
+                "schema": {
+                  "$ref": "#/components/schemas/BaseResponseString"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
     "/api/users/change-password": {
       "put": {
         "tags": [
@@ -126,7 +244,7 @@
           "content": {
             "application/json": {
               "schema": {
-                "$ref": "#/components/schemas/UserDTO"
+                "$ref": "#/components/schemas/PasswordDTO"
               }
             }
           },
@@ -138,22 +256,22 @@
             "content": {
               "*/*": {
                 "schema": {
-                  "$ref": "#/components/schemas/BaseResponseString"
+                  "$ref": "#/components/schemas/BaseResponseAuthenticationResponseDTO"
                 }
               }
             }
           },
           "400": {
-            "description": "Password is missing",
+            "description": "Validation failed",
             "content": {
               "*/*": {
                 "schema": {
                   "oneOf": [
                     {
-                      "$ref": "#/components/schemas/BaseResponseString"
+                      "$ref": "#/components/schemas/BaseResponseMapStringString"
                     },
                     {
-                      "$ref": "#/components/schemas/BaseResponseMapStringString"
+                      "$ref": "#/components/schemas/BaseResponseString"
                     }
                   ]
                 }
@@ -161,7 +279,7 @@
             }
           },
           "401": {
-            "description": "Unauthorized",
+            "description": "Invalid authorization credentials provided.",
             "content": {
               "*/*": {
                 "schema": {
@@ -181,7 +299,17 @@
             }
           },
           "404": {
-            "description": "Not Found",
+            "description": "User with this ID not found in Keycloak",
+            "content": {
+              "*/*": {
+                "schema": {
+                  "$ref": "#/components/schemas/BaseResponseString"
+                }
+              }
+            }
+          },
+          "409": {
+            "description": "Conflict",
             "content": {
               "*/*": {
                 "schema": {
@@ -243,10 +371,10 @@
                 "schema": {
                   "oneOf": [
                     {
-                      "$ref": "#/components/schemas/BaseResponseString"
+                      "$ref": "#/components/schemas/BaseResponseMapStringString"
                     },
                     {
-                      "$ref": "#/components/schemas/BaseResponseMapStringString"
+                      "$ref": "#/components/schemas/BaseResponseString"
                     }
                   ]
                 }
@@ -275,6 +403,16 @@
           },
           "404": {
             "description": "User role not found in Keycloak",
+            "content": {
+              "*/*": {
+                "schema": {
+                  "$ref": "#/components/schemas/BaseResponseString"
+                }
+              }
+            }
+          },
+          "409": {
+            "description": "Conflict",
             "content": {
               "*/*": {
                 "schema": {
@@ -344,10 +482,10 @@
                 "schema": {
                   "oneOf": [
                     {
-                      "$ref": "#/components/schemas/BaseResponseString"
+                      "$ref": "#/components/schemas/BaseResponseMapStringString"
                     },
                     {
-                      "$ref": "#/components/schemas/BaseResponseMapStringString"
+                      "$ref": "#/components/schemas/BaseResponseString"
                     }
                   ]
                 }
@@ -376,6 +514,16 @@
           },
           "404": {
             "description": "User role not found in Keycloak",
+            "content": {
+              "*/*": {
+                "schema": {
+                  "$ref": "#/components/schemas/BaseResponseString"
+                }
+              }
+            }
+          },
+          "409": {
+            "description": "Conflict",
             "content": {
               "*/*": {
                 "schema": {
@@ -435,10 +583,10 @@
                 "schema": {
                   "oneOf": [
                     {
-                      "$ref": "#/components/schemas/BaseResponseString"
+                      "$ref": "#/components/schemas/BaseResponseMapStringString"
                     },
                     {
-                      "$ref": "#/components/schemas/BaseResponseMapStringString"
+                      "$ref": "#/components/schemas/BaseResponseString"
                     }
                   ]
                 }
@@ -467,6 +615,16 @@
           },
           "404": {
             "description": "User role not found in Keycloak",
+            "content": {
+              "*/*": {
+                "schema": {
+                  "$ref": "#/components/schemas/BaseResponseString"
+                }
+              }
+            }
+          },
+          "409": {
+            "description": "Conflict",
             "content": {
               "*/*": {
                 "schema": {
@@ -528,10 +686,10 @@
                 "schema": {
                   "oneOf": [
                     {
-                      "$ref": "#/components/schemas/BaseResponseString"
+                      "$ref": "#/components/schemas/BaseResponseMapStringString"
                     },
                     {
-                      "$ref": "#/components/schemas/BaseResponseMapStringString"
+                      "$ref": "#/components/schemas/BaseResponseString"
                     }
                   ]
                 }
@@ -560,6 +718,16 @@
           },
           "404": {
             "description": "Not Found",
+            "content": {
+              "*/*": {
+                "schema": {
+                  "$ref": "#/components/schemas/BaseResponseString"
+                }
+              }
+            }
+          },
+          "409": {
+            "description": "Conflict",
             "content": {
               "*/*": {
                 "schema": {
@@ -606,10 +774,10 @@
                 "schema": {
                   "oneOf": [
                     {
-                      "$ref": "#/components/schemas/BaseResponseString"
+                      "$ref": "#/components/schemas/BaseResponseMapStringString"
                     },
                     {
-                      "$ref": "#/components/schemas/BaseResponseMapStringString"
+                      "$ref": "#/components/schemas/BaseResponseString"
                     }
                   ]
                 }
@@ -646,6 +814,16 @@
               }
             }
           },
+          "409": {
+            "description": "Conflict",
+            "content": {
+              "*/*": {
+                "schema": {
+                  "$ref": "#/components/schemas/BaseResponseString"
+                }
+              }
+            }
+          },
           "500": {
             "description": "Internal Server Error",
             "content": {
@@ -662,6 +840,104 @@
             "bearerToken": []
           }
         ]
+      }
+    },
+    "/api/users/forgot-password": {
+      "post": {
+        "tags": [
+          "user-manager-controller"
+        ],
+        "summary": "Forgot password functionality that send email to user to reset it",
+        "operationId": "forgotPassword",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "string"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "description": "Email to reset password sent successfully to user",
+            "content": {
+              "*/*": {
+                "schema": {
+                  "$ref": "#/components/schemas/BaseResponseString"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Validation Error",
+            "content": {
+              "*/*": {
+                "schema": {
+                  "oneOf": [
+                    {
+                      "$ref": "#/components/schemas/BaseResponseMapStringString"
+                    },
+                    {
+                      "$ref": "#/components/schemas/BaseResponseString"
+                    }
+                  ]
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Unauthorized",
+            "content": {
+              "*/*": {
+                "schema": {
+                  "$ref": "#/components/schemas/BaseResponseMapStringString"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "Forbidden",
+            "content": {
+              "*/*": {
+                "schema": {
+                  "$ref": "#/components/schemas/BaseResponseMapStringString"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "User with this email does not exist in Keycloak",
+            "content": {
+              "*/*": {
+                "schema": {
+                  "$ref": "#/components/schemas/BaseResponseString"
+                }
+              }
+            }
+          },
+          "409": {
+            "description": "User is not activated. Password can not be reset",
+            "content": {
+              "*/*": {
+                "schema": {
+                  "$ref": "#/components/schemas/BaseResponseString"
+                }
+              }
+            }
+          },
+          "500": {
+            "description": "Internal Server Error",
+            "content": {
+              "*/*": {
+                "schema": {
+                  "$ref": "#/components/schemas/BaseResponseString"
+                }
+              }
+            }
+          }
+        }
       }
     },
     "/api/users/create": {
@@ -699,10 +975,10 @@
                 "schema": {
                   "oneOf": [
                     {
-                      "$ref": "#/components/schemas/BaseResponseString"
+                      "$ref": "#/components/schemas/BaseResponseMapStringString"
                     },
                     {
-                      "$ref": "#/components/schemas/BaseResponseMapStringString"
+                      "$ref": "#/components/schemas/BaseResponseString"
                     }
                   ]
                 }
@@ -739,7 +1015,7 @@
               }
             }
           },
-          "417": {
+          "409": {
             "description": "User already exists in Keycloak",
             "content": {
               "*/*": {
@@ -802,10 +1078,10 @@
                 "schema": {
                   "oneOf": [
                     {
-                      "$ref": "#/components/schemas/BaseResponseString"
+                      "$ref": "#/components/schemas/BaseResponseMapStringString"
                     },
                     {
-                      "$ref": "#/components/schemas/BaseResponseMapStringString"
+                      "$ref": "#/components/schemas/BaseResponseString"
                     }
                   ]
                 }
@@ -834,6 +1110,16 @@
           },
           "404": {
             "description": "Not Found",
+            "content": {
+              "*/*": {
+                "schema": {
+                  "$ref": "#/components/schemas/BaseResponseString"
+                }
+              }
+            }
+          },
+          "409": {
+            "description": "Conflict",
             "content": {
               "*/*": {
                 "schema": {
@@ -894,16 +1180,16 @@
             }
           },
           "400": {
-            "description": "Invalid token was given as parameter.",
+            "description": "Invalid token was given as parameter",
             "content": {
               "*/*": {
                 "schema": {
                   "oneOf": [
                     {
-                      "$ref": "#/components/schemas/BaseResponseString"
+                      "$ref": "#/components/schemas/BaseResponseMapStringString"
                     },
                     {
-                      "$ref": "#/components/schemas/BaseResponseMapStringString"
+                      "$ref": "#/components/schemas/BaseResponseString"
                     }
                   ]
                 }
@@ -932,6 +1218,16 @@
           },
           "404": {
             "description": "Not Found",
+            "content": {
+              "*/*": {
+                "schema": {
+                  "$ref": "#/components/schemas/BaseResponseString"
+                }
+              }
+            }
+          },
+          "409": {
+            "description": "User is already activated",
             "content": {
               "*/*": {
                 "schema": {
@@ -982,16 +1278,16 @@
             }
           },
           "400": {
-            "description": "Invalid request: either credentials or token must be provided!",
+            "description": "Invalid input data",
             "content": {
               "*/*": {
                 "schema": {
                   "oneOf": [
                     {
-                      "$ref": "#/components/schemas/BaseResponseString"
+                      "$ref": "#/components/schemas/BaseResponseMapStringString"
                     },
                     {
-                      "$ref": "#/components/schemas/BaseResponseMapStringString"
+                      "$ref": "#/components/schemas/BaseResponseString"
                     }
                   ]
                 }
@@ -1020,6 +1316,16 @@
           },
           "404": {
             "description": "Not Found",
+            "content": {
+              "*/*": {
+                "schema": {
+                  "$ref": "#/components/schemas/BaseResponseString"
+                }
+              }
+            }
+          },
+          "409": {
+            "description": "User role already exists in Keycloak",
             "content": {
               "*/*": {
                 "schema": {
@@ -1071,10 +1377,10 @@
                 "schema": {
                   "oneOf": [
                     {
-                      "$ref": "#/components/schemas/BaseResponseString"
+                      "$ref": "#/components/schemas/BaseResponseMapStringString"
                     },
                     {
-                      "$ref": "#/components/schemas/BaseResponseMapStringString"
+                      "$ref": "#/components/schemas/BaseResponseString"
                     }
                   ]
                 }
@@ -1103,6 +1409,16 @@
           },
           "404": {
             "description": "Not Found",
+            "content": {
+              "*/*": {
+                "schema": {
+                  "$ref": "#/components/schemas/BaseResponseString"
+                }
+              }
+            }
+          },
+          "409": {
+            "description": "Conflict",
             "content": {
               "*/*": {
                 "schema": {
@@ -1164,10 +1480,10 @@
                 "schema": {
                   "oneOf": [
                     {
-                      "$ref": "#/components/schemas/BaseResponseString"
+                      "$ref": "#/components/schemas/BaseResponseMapStringString"
                     },
                     {
-                      "$ref": "#/components/schemas/BaseResponseMapStringString"
+                      "$ref": "#/components/schemas/BaseResponseString"
                     }
                   ]
                 }
@@ -1196,6 +1512,16 @@
           },
           "404": {
             "description": "Not Found",
+            "content": {
+              "*/*": {
+                "schema": {
+                  "$ref": "#/components/schemas/BaseResponseString"
+                }
+              }
+            }
+          },
+          "409": {
+            "description": "Conflict",
             "content": {
               "*/*": {
                 "schema": {
@@ -1257,10 +1583,10 @@
                 "schema": {
                   "oneOf": [
                     {
-                      "$ref": "#/components/schemas/BaseResponseString"
+                      "$ref": "#/components/schemas/BaseResponseMapStringString"
                     },
                     {
-                      "$ref": "#/components/schemas/BaseResponseMapStringString"
+                      "$ref": "#/components/schemas/BaseResponseString"
                     }
                   ]
                 }
@@ -1289,6 +1615,16 @@
           },
           "404": {
             "description": "Not Found",
+            "content": {
+              "*/*": {
+                "schema": {
+                  "$ref": "#/components/schemas/BaseResponseString"
+                }
+              }
+            }
+          },
+          "409": {
+            "description": "Conflict",
             "content": {
               "*/*": {
                 "schema": {
@@ -1350,10 +1686,10 @@
                 "schema": {
                   "oneOf": [
                     {
-                      "$ref": "#/components/schemas/BaseResponseString"
+                      "$ref": "#/components/schemas/BaseResponseMapStringString"
                     },
                     {
-                      "$ref": "#/components/schemas/BaseResponseMapStringString"
+                      "$ref": "#/components/schemas/BaseResponseString"
                     }
                   ]
                 }
@@ -1382,6 +1718,16 @@
           },
           "404": {
             "description": "Not Found",
+            "content": {
+              "*/*": {
+                "schema": {
+                  "$ref": "#/components/schemas/BaseResponseString"
+                }
+              }
+            }
+          },
+          "409": {
+            "description": "Conflict",
             "content": {
               "*/*": {
                 "schema": {
@@ -1433,10 +1779,10 @@
                 "schema": {
                   "oneOf": [
                     {
-                      "$ref": "#/components/schemas/BaseResponseString"
+                      "$ref": "#/components/schemas/BaseResponseMapStringString"
                     },
                     {
-                      "$ref": "#/components/schemas/BaseResponseMapStringString"
+                      "$ref": "#/components/schemas/BaseResponseString"
                     }
                   ]
                 }
@@ -1465,6 +1811,16 @@
           },
           "404": {
             "description": "Not Found",
+            "content": {
+              "*/*": {
+                "schema": {
+                  "$ref": "#/components/schemas/BaseResponseString"
+                }
+              }
+            }
+          },
+          "409": {
+            "description": "Conflict",
             "content": {
               "*/*": {
                 "schema": {
@@ -1516,10 +1872,10 @@
                 "schema": {
                   "oneOf": [
                     {
-                      "$ref": "#/components/schemas/BaseResponseString"
+                      "$ref": "#/components/schemas/BaseResponseMapStringString"
                     },
                     {
-                      "$ref": "#/components/schemas/BaseResponseMapStringString"
+                      "$ref": "#/components/schemas/BaseResponseString"
                     }
                   ]
                 }
@@ -1548,6 +1904,16 @@
           },
           "404": {
             "description": "Not Found",
+            "content": {
+              "*/*": {
+                "schema": {
+                  "$ref": "#/components/schemas/BaseResponseString"
+                }
+              }
+            }
+          },
+          "409": {
+            "description": "Conflict",
             "content": {
               "*/*": {
                 "schema": {
@@ -1609,10 +1975,10 @@
                 "schema": {
                   "oneOf": [
                     {
-                      "$ref": "#/components/schemas/BaseResponseString"
+                      "$ref": "#/components/schemas/BaseResponseMapStringString"
                     },
                     {
-                      "$ref": "#/components/schemas/BaseResponseMapStringString"
+                      "$ref": "#/components/schemas/BaseResponseString"
                     }
                   ]
                 }
@@ -1641,6 +2007,16 @@
           },
           "404": {
             "description": "Not Found",
+            "content": {
+              "*/*": {
+                "schema": {
+                  "$ref": "#/components/schemas/BaseResponseString"
+                }
+              }
+            }
+          },
+          "409": {
+            "description": "Conflict",
             "content": {
               "*/*": {
                 "schema": {
@@ -1690,7 +2066,7 @@
             "content": {
               "*/*": {
                 "schema": {
-                  "$ref": "#/components/schemas/BaseResponseListString"
+                  "$ref": "#/components/schemas/BaseResponseListUserRoleDTO"
                 }
               }
             }
@@ -1702,10 +2078,10 @@
                 "schema": {
                   "oneOf": [
                     {
-                      "$ref": "#/components/schemas/BaseResponseString"
+                      "$ref": "#/components/schemas/BaseResponseMapStringString"
                     },
                     {
-                      "$ref": "#/components/schemas/BaseResponseMapStringString"
+                      "$ref": "#/components/schemas/BaseResponseString"
                     }
                   ]
                 }
@@ -1734,6 +2110,16 @@
           },
           "404": {
             "description": "Not Found",
+            "content": {
+              "*/*": {
+                "schema": {
+                  "$ref": "#/components/schemas/BaseResponseString"
+                }
+              }
+            }
+          },
+          "409": {
+            "description": "Conflict",
             "content": {
               "*/*": {
                 "schema": {
@@ -1785,10 +2171,10 @@
                 "schema": {
                   "oneOf": [
                     {
-                      "$ref": "#/components/schemas/BaseResponseString"
+                      "$ref": "#/components/schemas/BaseResponseMapStringString"
                     },
                     {
-                      "$ref": "#/components/schemas/BaseResponseMapStringString"
+                      "$ref": "#/components/schemas/BaseResponseString"
                     }
                   ]
                 }
@@ -1817,6 +2203,119 @@
           },
           "404": {
             "description": "Not Found",
+            "content": {
+              "*/*": {
+                "schema": {
+                  "$ref": "#/components/schemas/BaseResponseString"
+                }
+              }
+            }
+          },
+          "409": {
+            "description": "Conflict",
+            "content": {
+              "*/*": {
+                "schema": {
+                  "$ref": "#/components/schemas/BaseResponseString"
+                }
+              }
+            }
+          },
+          "500": {
+            "description": "Internal Server Error",
+            "content": {
+              "*/*": {
+                "schema": {
+                  "$ref": "#/components/schemas/BaseResponseString"
+                }
+              }
+            }
+          }
+        },
+        "security": [
+          {
+            "bearerToken": []
+          }
+        ]
+      }
+    },
+    "/api/admin/roles/names/pilot/{pilotCode}": {
+      "get": {
+        "tags": [
+          "admin-controller"
+        ],
+        "summary": "Retrieve all user role names from Keycloak filtered by Pilot Code",
+        "operationId": "getAllUserRolesNamesPerPilot",
+        "parameters": [
+          {
+            "name": "pilotCode",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "User role names retrieved successfully",
+            "content": {
+              "*/*": {
+                "schema": {
+                  "$ref": "#/components/schemas/BaseResponseListString"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Invalid request: either credentials or token must be provided!",
+            "content": {
+              "*/*": {
+                "schema": {
+                  "oneOf": [
+                    {
+                      "$ref": "#/components/schemas/BaseResponseMapStringString"
+                    },
+                    {
+                      "$ref": "#/components/schemas/BaseResponseString"
+                    }
+                  ]
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Authentication process failed!",
+            "content": {
+              "*/*": {
+                "schema": {
+                  "$ref": "#/components/schemas/BaseResponseMapStringString"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "User of role 'ADMIN' can only retrieve user roles only inside their organization",
+            "content": {
+              "*/*": {
+                "schema": {
+                  "$ref": "#/components/schemas/BaseResponseMapStringString"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "Not Found",
+            "content": {
+              "*/*": {
+                "schema": {
+                  "$ref": "#/components/schemas/BaseResponseString"
+                }
+              }
+            }
+          },
+          "409": {
+            "description": "Conflict",
             "content": {
               "*/*": {
                 "schema": {
@@ -1868,10 +2367,10 @@
                 "schema": {
                   "oneOf": [
                     {
-                      "$ref": "#/components/schemas/BaseResponseString"
+                      "$ref": "#/components/schemas/BaseResponseMapStringString"
                     },
                     {
-                      "$ref": "#/components/schemas/BaseResponseMapStringString"
+                      "$ref": "#/components/schemas/BaseResponseString"
                     }
                   ]
                 }
@@ -1900,6 +2399,16 @@
           },
           "404": {
             "description": "Not Found",
+            "content": {
+              "*/*": {
+                "schema": {
+                  "$ref": "#/components/schemas/BaseResponseString"
+                }
+              }
+            }
+          },
+          "409": {
+            "description": "Conflict",
             "content": {
               "*/*": {
                 "schema": {
@@ -1951,10 +2460,10 @@
                 "schema": {
                   "oneOf": [
                     {
-                      "$ref": "#/components/schemas/BaseResponseString"
+                      "$ref": "#/components/schemas/BaseResponseMapStringString"
                     },
                     {
-                      "$ref": "#/components/schemas/BaseResponseMapStringString"
+                      "$ref": "#/components/schemas/BaseResponseString"
                     }
                   ]
                 }
@@ -1983,6 +2492,16 @@
           },
           "404": {
             "description": "Not Found",
+            "content": {
+              "*/*": {
+                "schema": {
+                  "$ref": "#/components/schemas/BaseResponseString"
+                }
+              }
+            }
+          },
+          "409": {
+            "description": "Conflict",
             "content": {
               "*/*": {
                 "schema": {
@@ -2044,10 +2563,10 @@
                 "schema": {
                   "oneOf": [
                     {
-                      "$ref": "#/components/schemas/BaseResponseString"
+                      "$ref": "#/components/schemas/BaseResponseMapStringString"
                     },
                     {
-                      "$ref": "#/components/schemas/BaseResponseMapStringString"
+                      "$ref": "#/components/schemas/BaseResponseString"
                     }
                   ]
                 }
@@ -2084,6 +2603,16 @@
               }
             }
           },
+          "409": {
+            "description": "User not found in Keycloak",
+            "content": {
+              "*/*": {
+                "schema": {
+                  "$ref": "#/components/schemas/BaseResponseString"
+                }
+              }
+            }
+          },
           "500": {
             "description": "Unable to delete user from Keycloak",
             "content": {
@@ -2105,14 +2634,11 @@
   },
   "components": {
     "schemas": {
-      "BaseResponseMapStringString": {
+      "BaseResponseString": {
         "type": "object",
         "properties": {
           "data": {
-            "type": "object",
-            "additionalProperties": {
-              "type": "string"
-            }
+            "type": "string"
           },
           "errors": {
             "type": "object"
@@ -2129,11 +2655,14 @@
           }
         }
       },
-      "BaseResponseString": {
+      "BaseResponseMapStringString": {
         "type": "object",
         "properties": {
           "data": {
-            "type": "string"
+            "type": "object",
+            "additionalProperties": {
+              "type": "string"
+            }
           },
           "errors": {
             "type": "object"
@@ -2172,28 +2701,7 @@
             "type": "string"
           },
           "userRole": {
-            "type": "string",
-            "enum": [
-              "ROBOT_PROGRAMMER",
-              "VIRTUAL_COMMISSIONING_ENGINEER",
-              "ROBOT_SIMULATION_USER",
-              "PROCESS_ENGINEER",
-              "PLANT_OPERATOR",
-              "TECHNICIAN",
-              "PRODUCTION_SCHEDULING_TEAM_MEMBER",
-              "MAINTENANCE_ENGINEER",
-              "INNOVATION_ENGINEER",
-              "OPERATOR",
-              "SHOP_FLOOR_MANAGER",
-              "PLANT_MANAGER",
-              "PRODUCTION_MANAGER",
-              "LOGISTICS_MANAGER",
-              "PRODUCTION_SCHEDULER",
-              "DESIGN_EXPERT",
-              "AUTOMATION_MANAGER",
-              "SUPER_ADMIN",
-              "NONE"
-            ]
+            "type": "string"
           },
           "pilotRole": {
             "type": "string",
@@ -2212,12 +2720,64 @@
               "FFT",
               "ALL"
             ]
-          },
-          "activationToken": {
+          }
+        }
+      },
+      "PasswordDTO": {
+        "required": [
+          "currentPassword",
+          "newPassword"
+        ],
+        "type": "object",
+        "properties": {
+          "currentPassword": {
             "type": "string"
           },
-          "activationExpiry": {
+          "newPassword": {
             "type": "string"
+          }
+        }
+      },
+      "AuthenticationResponseDTO": {
+        "type": "object",
+        "properties": {
+          "accessToken": {
+            "type": "string"
+          },
+          "expiresIn": {
+            "type": "integer",
+            "format": "int32"
+          },
+          "tokenType": {
+            "type": "string"
+          },
+          "refreshToken": {
+            "type": "string"
+          },
+          "refreshExpiresIn": {
+            "type": "integer",
+            "format": "int32"
+          }
+        }
+      },
+      "BaseResponseAuthenticationResponseDTO": {
+        "type": "object",
+        "properties": {
+          "data": {
+            "$ref": "#/components/schemas/AuthenticationResponseDTO"
+          },
+          "errors": {
+            "type": "object"
+          },
+          "message": {
+            "type": "string"
+          },
+          "success": {
+            "type": "boolean"
+          },
+          "timestamp": {
+            "type": "string",
+            "format": "date-time"
           }
         }
       },
@@ -2268,28 +2828,6 @@
           "timestamp": {
             "type": "string",
             "format": "date-time"
-          }
-        }
-      },
-      "AuthenticationResponseDTO": {
-        "type": "object",
-        "properties": {
-          "accessToken": {
-            "type": "string"
-          },
-          "expiresIn": {
-            "type": "integer",
-            "format": "int32"
-          },
-          "tokenType": {
-            "type": "string"
-          },
-          "refreshToken": {
-            "type": "string"
-          },
-          "refreshExpiresIn": {
-            "type": "integer",
-            "format": "int32"
           }
         }
       },
