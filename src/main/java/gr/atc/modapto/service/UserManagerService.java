@@ -265,8 +265,8 @@ public class UserManagerService implements IUserManagerService {
           HttpMethod.GET, entity, new ParameterizedTypeReference<>() {});
 
       // Parse response
-      return Optional.ofNullable(response).filter(r -> r.getStatusCode().is2xxSuccessful())
-          .map(ResponseEntity::getBody).filter(body -> body != null && !body.isEmpty())
+      return Optional.of(response).filter(r -> r.getStatusCode().is2xxSuccessful())
+          .map(ResponseEntity::getBody).filter(body -> !body.isEmpty())
           .map(body -> body.stream().map(UserRepresentationDTO::toUserDTO)
               .filter(user -> "ALL".equals(pilot) || pilot.equals(user.getPilotCode().toString()))
               .toList())
@@ -302,9 +302,8 @@ public class UserManagerService implements IUserManagerService {
           HttpMethod.GET, entity, UserRepresentationDTO.class);
 
       // Parse response
-      return Optional.ofNullable(response).filter(resp -> resp.getStatusCode().is2xxSuccessful())
+      return Optional.of(response).filter(resp -> resp.getStatusCode().is2xxSuccessful())
           .map(ResponseEntity::getBody)
-          .filter(body -> body != null)
           .map(UserRepresentationDTO::toUserDTO)
           .orElse(null);
     } catch (HttpClientErrorException | HttpServerErrorException e) {
@@ -388,7 +387,7 @@ public class UserManagerService implements IUserManagerService {
           restTemplate.exchange(requestUri, HttpMethod.PUT, entity, Object.class);
 
       // Parse response
-      return Optional.ofNullable(response).filter(resp -> resp.getStatusCode().is2xxSuccessful())
+      return Optional.of(response).filter(resp -> resp.getStatusCode().is2xxSuccessful())
           .map(resp -> userAuthentication).orElse(null);
     } catch (HttpClientErrorException | HttpServerErrorException e) {
       log.error("HTTP error during changing password of user with id {} : {}, Response body: {}",
@@ -425,9 +424,9 @@ public class UserManagerService implements IUserManagerService {
           HttpMethod.GET, entity, new ParameterizedTypeReference<>() {});
 
       // Parse response
-      return Optional.ofNullable(response).filter(resp -> resp.getStatusCode().is2xxSuccessful())
-          .map(ResponseEntity::getBody).filter(body -> body != null && !body.isEmpty())
-          .map(body -> body.getFirst()).orElse(null);
+      return Optional.of(response).filter(resp -> resp.getStatusCode().is2xxSuccessful())
+          .map(ResponseEntity::getBody).filter(body ->!body.isEmpty())
+          .map(List::getFirst).orElse(null);
     } catch (HttpServerErrorException e) {
       log.error("HTTP error retrieving user by email: {}, Response body: {}", e.getMessage(),
           e.getResponseBodyAsString(), e);
@@ -517,8 +516,8 @@ public class UserManagerService implements IUserManagerService {
   /**
    * Call functions to assign roles to user
    * 
-   * @param user : User details
-   * @param existingUser : User Representation
+   * @param newUserDetails : User details
+   * @param existingUserDetails : User Representation
    * @param userId : User ID
    * @param token : JWT Token value
    */
@@ -637,9 +636,9 @@ public class UserManagerService implements IUserManagerService {
           HttpMethod.GET, entity, new ParameterizedTypeReference<>() {});
 
       // Parse Response
-      return Optional.ofNullable(response).filter(resp -> resp.getStatusCode().is2xxSuccessful())
-          .map(ResponseEntity::getBody).map(body -> body.stream()
-              .filter(role -> role.getName().equals(pilotRole)).findFirst().orElse(null))
+      return Optional.of(response).filter(resp -> resp.getStatusCode().is2xxSuccessful())
+              .map(ResponseEntity::getBody).flatMap(body -> body.stream()
+                      .filter(role -> role.getName().equals(pilotRole)).findFirst())
           .orElse(null);
     } catch (HttpClientErrorException | HttpServerErrorException e) {
       log.error("HTTP error during retrieving realm roles : {}, Response body: {}", e.getMessage(),
@@ -825,7 +824,7 @@ public class UserManagerService implements IUserManagerService {
           HttpMethod.GET, entity, new ParameterizedTypeReference<>() {});
 
       // Parse Response
-      return Optional.ofNullable(response).filter(resp -> resp.getStatusCode().is2xxSuccessful())
+      return Optional.of(response).filter(resp -> resp.getStatusCode().is2xxSuccessful())
           .map(ResponseEntity::getBody)
           .map(body -> body.stream().map(UserRepresentationDTO::toUserDTO).toList())
           .orElse(Collections.emptyList());
@@ -865,7 +864,7 @@ public class UserManagerService implements IUserManagerService {
           HttpMethod.GET, entity, new ParameterizedTypeReference<>() {});
 
       // Parse Response
-      return Optional.ofNullable(response).filter(resp -> resp.getStatusCode().is2xxSuccessful())
+      return Optional.of(response).filter(resp -> resp.getStatusCode().is2xxSuccessful())
           .map(ResponseEntity::getBody)
           .map(body -> body.stream().map(UserRepresentationDTO::toUserDTO).toList())
           .orElse(Collections.emptyList());
@@ -934,7 +933,6 @@ public class UserManagerService implements IUserManagerService {
    * Forget password business logic to formulate reset token and send email to User
    * 
    * @param email : Email Address
-   * @return True on Success, False on Error
    */
   @Override
   public void forgotPassword(String email) {
@@ -1092,7 +1090,7 @@ public class UserManagerService implements IUserManagerService {
           restTemplate.exchange(requestUri, HttpMethod.DELETE, entity, Object.class);
 
       // Return true if successful - Parse response
-      return Optional.ofNullable(response).filter(resp -> resp.getStatusCode().is2xxSuccessful())
+      return Optional.of(response).filter(resp -> resp.getStatusCode().is2xxSuccessful())
           .map(resp -> true).orElse(false);
     } catch (HttpClientErrorException | HttpServerErrorException e) {
       log.error("HTTP error during deleting user's role mappings : {}, Response body: {}",
@@ -1126,7 +1124,7 @@ public class UserManagerService implements IUserManagerService {
           restTemplate.exchange(requestUri, HttpMethod.DELETE, entity, Object.class);
 
       // Return true if successful - Parse response
-      return Optional.ofNullable(response).filter(resp -> resp.getStatusCode().is2xxSuccessful())
+      return Optional.of(response).filter(resp -> resp.getStatusCode().is2xxSuccessful())
           .map(resp -> true).orElse(false);
     } catch (HttpClientErrorException | HttpServerErrorException e) {
       log.error("HTTP error during deleting user's realm role : {}, Response body: {}",

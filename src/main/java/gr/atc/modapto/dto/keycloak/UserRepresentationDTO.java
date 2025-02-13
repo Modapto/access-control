@@ -30,7 +30,7 @@ public class UserRepresentationDTO {
 
   @JsonProperty
   private String id;
-
+  
   @JsonProperty("email")
   private String email;
 

@@ -16,5 +16,5 @@ public class GroupDTO {
     private String name;
     private String path;
     private int subGroupCount;
-    private List<String> subGroups;
+    private List<GroupDTO> subGroups;
 }

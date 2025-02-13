@@ -1,10 +1,10 @@
 package gr.atc.modapto.service;
 
-import java.util.Collections;
-import java.util.List;
-import java.util.Map;
-import java.util.Optional;
+import java.net.URI;
+import java.util.*;
 
+import gr.atc.modapto.dto.PilotDTO;
+import gr.atc.modapto.enums.PilotRole;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.core.ParameterizedTypeReference;
 import org.springframework.http.HttpEntity;
@@ -88,7 +88,7 @@ public class AdminService implements IAdminService {
             List<String> excludedList = isSuperAdmin ? SUPER_ADMIN_EXCLUDED_ROLES : ADMIN_EXCLUDED_ROLES;
             
             // Parse response
-            return Optional.ofNullable(response)
+            return Optional.of(response)
                     .filter(resp -> resp.getStatusCode().is2xxSuccessful())
                     .map(ResponseEntity::getBody)
                     .map(body -> body.stream()
@@ -130,7 +130,7 @@ public class AdminService implements IAdminService {
             );
 
             // Parse response
-            return Optional.ofNullable(response)
+            return Optional.of(response)
               .filter(resp -> resp.getStatusCode().is2xxSuccessful())
               .map(ResponseEntity::getBody)
               .map(body -> body.stream()
@@ -178,7 +178,7 @@ public class AdminService implements IAdminService {
             );
 
             // Parse Response
-            return Optional.ofNullable(response)
+            return Optional.of(response)
               .filter(resp -> resp.getStatusCode().is2xxSuccessful())
               .map(ResponseEntity::getBody)
               .map(body -> {
@@ -196,9 +196,15 @@ public class AdminService implements IAdminService {
                   }
               })
               .orElse(Collections.emptyList());
-        } catch (HttpClientErrorException | HttpServerErrorException e) {
+        } catch (HttpServerErrorException e) {
             log.error("HTTP error during retrieval of user roles: {}", e.getMessage(), e);
             throw new KeycloakException("HTTP error during retrieval of user roles", e);
+        } catch (HttpClientErrorException e) {
+            Map<String, Object> responseBody = e.getResponseBodyAs(new ParameterizedTypeReference<>() {});
+            if (responseBody != null && responseBody.containsKey(ERROR_FIELD)) {
+                throw new KeycloakException(responseBody.get(ERROR_FIELD).toString(), e);
+            }
+            throw new KeycloakException(e.getResponseBodyAsString(), e);
         } catch (RestClientException e) {
             log.error("Error during retrieval of user roles: {}", e.getMessage(), e);
             throw new KeycloakException("Error during retrieval of user roles", e);
@@ -245,7 +251,7 @@ public class AdminService implements IAdminService {
                 return false;
 
             // Assign the Role to the Group (Pilot)
-            return assignUserRoleToPilot(userRole.getName() , userRole.getPilotCode().toString(), clientId, token);
+            return assignUserRoleToPilot(userRole.getName() , userRole.getPilotCode().toString(), token);
         } catch (HttpServerErrorException e) {
             log.error("HTTP server error during creating an new user role: {}", e.getMessage(), e);
             throw new KeycloakException("HTTP server error during creating an new user role", e);
@@ -419,7 +425,7 @@ public class AdminService implements IAdminService {
             );
 
             // Parse Response
-            return Optional.ofNullable(response)
+            return Optional.of(response)
                 .filter(resp -> resp.getStatusCode().is2xxSuccessful())
                 .map(ResponseEntity::getBody)
                 .map(body -> body.stream()
@@ -469,7 +475,7 @@ public class AdminService implements IAdminService {
             );
 
              // Parse Response
-             return Optional.ofNullable(response)
+             return Optional.of(response)
                 .filter(resp -> resp.getStatusCode().is2xxSuccessful())
                 .map(ResponseEntity::getBody)
                 .map(body -> body.stream()
@@ -486,6 +492,93 @@ public class AdminService implements IAdminService {
     }
 
     /**
+     * Create a new Pilot (Group) in Keycloak
+     *
+     * @param tokenValue  : JWT Token Value
+     * @param pilotData   : Information for Group Creation
+     * @return True on success, False on error
+     */
+    @Override
+    public boolean createNewPilot(String tokenValue, PilotDTO pilotData) {
+        // Set Headers
+        HttpHeaders headers = new HttpHeaders();
+        headers.setBearerAuth(tokenValue);
+        headers.setContentType(MediaType.APPLICATION_JSON);
+
+        // Formulate the Group
+        GroupDTO group = GroupDTO.builder()
+                .name(pilotData.getName().toUpperCase())
+                .subGroupCount(pilotData.getSubGroups().size())
+                .build();
+
+        HttpEntity<GroupDTO> entity = new HttpEntity<>(group, headers);
+
+        // Create the URI and make the POST request
+        StringBuilder requestUri = new StringBuilder();
+        requestUri.append(adminUri).append("/groups");
+        try{
+            ResponseEntity<Void> mainGroupResponse = restTemplate.exchange(
+                    requestUri.toString(),
+                    HttpMethod.POST,
+                    entity,
+                    Void.class
+            );
+
+            if (!mainGroupResponse.getStatusCode().is2xxSuccessful()) {
+                return false;
+            }
+
+            // Return if there are no available subgroups to assign
+            if (pilotData.getSubGroups().isEmpty())
+                return true;
+
+            // Get the ID of the created group
+            String mainGroupId = extractGroupIdFromLocation(Objects.requireNonNull(mainGroupResponse.getHeaders().getLocation()));
+
+            // Create each subgroup under the main group
+            for (PilotRole pilotRole : pilotData.getSubGroups()) {
+                GroupDTO subGroupDto = GroupDTO.builder()
+                        .name(pilotRole.toString())
+                        .build();
+
+                HttpEntity<GroupDTO> subGroupEntity = new HttpEntity<>(subGroupDto, headers);
+
+                // Create subgroup using the parent group's ID
+                ResponseEntity<Void> subGroupResponse = restTemplate.exchange(
+                        adminUri + "/groups/" + mainGroupId + "/children",
+                        HttpMethod.POST,
+                        subGroupEntity,
+                        Void.class
+                );
+
+                if (!subGroupResponse.getStatusCode().is2xxSuccessful()) {
+                    log.error("Failed to create subgroup: {}", pilotRole);
+                    return false;
+                }
+            }
+
+            return true;
+        } catch (HttpClientErrorException | HttpServerErrorException e) {
+            log.error("HTTP error during creating a new Pilot in Keycloak: {}", e.getMessage(), e);
+            throw new KeycloakException("HTTP error during creating a new Pilot in Keycloak", e);
+        } catch (RestClientException e) {
+            log.error("Error during creating a new Pilot in Keycloak: {}", e.getMessage(), e);
+            throw new KeycloakException("Error during creating a new Pilot in Keycloak", e);
+        }
+    }
+
+    /**
+     * Extract group ID from Location header URI
+     *
+     * @param location URI from response header
+     * @return Group ID
+     */
+    private String extractGroupIdFromLocation(URI location) {
+        String path = location.getPath();
+        return path.substring(path.lastIndexOf('/') + 1);
+    }
+
+    /**
      * Assign a User Role to a specific Group - Pilot Code
      *
      * @param userRole : User Role to assign
@@ -494,7 +587,12 @@ public class AdminService implements IAdminService {
      * @return True on success, False on error
      */
     @Override
-    public boolean assignUserRoleToPilot(String userRole, String pilotCode, String clientId, String token) {
+    public boolean assignUserRoleToPilot(String userRole, String pilotCode, String token) {
+        // Retrieve clientId and check if is not null
+        String clientId = keycloakSupportService.getClientId();
+        if (clientId == null)
+            throw new DataRetrievalException(CLIENT_NOT_FOUND_MESSAGE);
+
         // Retrieve Group ID
         String groupId = keycloakSupportService.retrievePilotCodeID(pilotCode, token);
         if (groupId == null)

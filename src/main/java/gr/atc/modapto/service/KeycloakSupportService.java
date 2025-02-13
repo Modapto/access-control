@@ -147,14 +147,13 @@ public class KeycloakSupportService {
             );
 
             // Parse response
-            return Optional.ofNullable(response)
-                .filter(resp -> resp.getStatusCode().is2xxSuccessful())
-                .map(ResponseEntity::getBody)
-                .map(body -> body.stream()
-                    .filter(client -> client.getClientId().equals(clientName))
-                    .map(ClientDTO::getId)
-                    .findFirst()
-                    .orElse(null))
+            return Optional.of(response)
+                    .filter(resp -> resp.getStatusCode().is2xxSuccessful())
+                    .map(ResponseEntity::getBody)
+                    .flatMap(body -> body.stream()
+                            .filter(client -> client.getClientId().equals(clientName))
+                            .map(ClientDTO::getId)
+                            .findFirst())
                 .orElse(null);
         } catch (HttpServerErrorException e) {
             log.error("HTTP server error during retrieval of client ID: {}", e.getMessage(), e);
@@ -196,14 +195,12 @@ public class KeycloakSupportService {
             );
 
            // Parse response
-           return Optional.ofNullable(response)
-              .filter(resp -> resp.getStatusCode().is2xxSuccessful())
-              .map(ResponseEntity::getBody)
-              .map(body -> body.stream()
-                    .filter(group -> group.getName().equals(pilot))
-                    .map(GroupDTO::getId)
-                    .findFirst()
-                      .orElse(null))
+           return Optional.of(response)
+                   .filter(resp -> resp.getStatusCode().is2xxSuccessful())
+                   .map(ResponseEntity::getBody).flatMap(body -> body.stream()
+                           .filter(group -> group.getName().equals(pilot))
+                           .map(GroupDTO::getId)
+                           .findFirst())
               .orElse(null);
         } catch (HttpServerErrorException e) {
             log.error("HTTP server error during retrieval of group ID: {}", e.getMessage(), e);

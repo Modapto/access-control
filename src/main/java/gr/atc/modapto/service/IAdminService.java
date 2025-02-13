@@ -1,5 +1,6 @@
 package gr.atc.modapto.service;
 
+import gr.atc.modapto.dto.PilotDTO;
 import gr.atc.modapto.dto.UserDTO;
 import gr.atc.modapto.dto.UserRoleDTO;
 import jakarta.validation.Valid;
@@ -14,7 +15,7 @@ public interface IAdminService {
 
     List<UserRoleDTO> retrieveAllUserRoles(String token, String pilot);
 
-    boolean assignUserRoleToPilot(String userRole, String pilotCode, String clientId, String token);
+    boolean assignUserRoleToPilot(String userRole, String pilotCode, String token);
 
     boolean createUserRole(String tokenValue, @Valid UserRoleDTO pilotRole);
 
@@ -27,5 +28,7 @@ public interface IAdminService {
     List<String> retrieveAllUserRolesByPilot(String tokenValue, String pilotCode);
 
     List<UserDTO> retrieveAllUsersByUserRole(String tokenValue, String userRole);
+
+    boolean createNewPilot(String tokenValue, PilotDTO pilotData);
 }
 

@@ -7,6 +7,8 @@ import java.util.Map;
 
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.hamcrest.Matchers.is;
+
+import gr.atc.modapto.dto.PilotDTO;
 import org.junit.jupiter.api.BeforeAll;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
@@ -703,6 +705,198 @@ class AdminControllerTests {
                 .andExpect(jsonPath("$.message", is("Users associated with the role retrieved successfully")))
                 .andExpect(jsonPath("$.data[0].username", is("user1")))
                 .andExpect(jsonPath("$.data[1].username", is("user2")));
+    }
+
+    @DisplayName("Create a new pilot / organization : Sucess")
+    @Test
+    void givenPilotInformation_whenCreateNewPilotInSystem_thenReturnSuccess() throws Exception {
+        // Given
+        PilotDTO pilotData = PilotDTO.builder().name("TEST_PILOT").subGroups(List.of(PilotRole.ADMIN)).build();
+
+        // Formulate JWT
+        Jwt token = createMockJwtToken("SUPER_ADMIN", "SUPER_ADMIN", "ALL");
+
+        // Mock JWT authentication
+        JwtAuthenticationToken jwtAuthenticationToken = new JwtAuthenticationToken(token, List.of(new SimpleGrantedAuthority("ROLE_SUPER_ADMIN")));
+        SecurityContextHolder.getContext().setAuthentication(jwtAuthenticationToken);
+
+        // Mock service method
+        when(adminService.createNewPilot(anyString(), any(PilotDTO.class)))
+                .thenReturn(true);
+
+        // When
+        ResultActions response = mockMvc.perform(MockMvcRequestBuilders.post("/api/admin/pilot")
+                .with(csrf())
+                .content(objectMapper.writeValueAsString(pilotData))
+                .contentType(MediaType.APPLICATION_JSON));
+
+        // Then
+        response.andExpect(status().isCreated())
+                .andExpect(jsonPath("$.success", is(true)))
+                .andExpect(jsonPath("$.message", is("Pilot created successfully")));
+    }
+
+    @DisplayName("Create a new pilot / organization : Not Authorized")
+    @Test
+    void givenPilotInformationAndInvalidJWT_whenCreateNewPilotInSystem_thenReturnForbidden() throws Exception {
+        // Given
+        PilotDTO pilot = PilotDTO.builder().name("TEST_PILOT").subGroups(List.of(PilotRole.ADMIN, PilotRole.USER)).build();
+
+        // Mock JWT authentication
+        JwtAuthenticationToken jwtAuthenticationToken = new JwtAuthenticationToken(jwt, List.of(new SimpleGrantedAuthority("ROLE_ADMIN")));
+        SecurityContextHolder.getContext().setAuthentication(jwtAuthenticationToken);
+
+        // When
+        ResultActions response = mockMvc.perform(MockMvcRequestBuilders.post("/api/admin/pilot")
+                .with(csrf())
+                .content(objectMapper.writeValueAsString(pilot))
+                .contentType(MediaType.APPLICATION_JSON));
+
+        // Then
+        response.andExpect(status().isForbidden())
+                .andExpect(jsonPath("$.success", is(false)))
+                .andExpect(jsonPath("$.message", is("Invalid authorization parameters. You don't have the rights to access the resource or check the JWT and CSRF Tokens")));
+    }
+
+    @DisplayName("Create a new pilot / organization : Internal Server Error")
+    @Test
+    void givenPilotInformation_whenCreateNewPilotInSystem_thenReturnInternalServerError() throws Exception {
+        // Given
+        PilotDTO pilotData = PilotDTO.builder().name("TEST_PILOT").subGroups(List.of(PilotRole.ADMIN)).build();
+
+        // Formulate JWT
+        Jwt token = createMockJwtToken("SUPER_ADMIN", "SUPER_ADMIN", "ALL");
+
+        // Mock JWT authentication
+        JwtAuthenticationToken jwtAuthenticationToken = new JwtAuthenticationToken(token, List.of(new SimpleGrantedAuthority("ROLE_SUPER_ADMIN")));
+        SecurityContextHolder.getContext().setAuthentication(jwtAuthenticationToken);
+
+        // Mock service method
+        when(adminService.createNewPilot(anyString(), any(PilotDTO.class)))
+                .thenReturn(false);
+
+        // When
+        ResultActions response = mockMvc.perform(MockMvcRequestBuilders.post("/api/admin/pilot")
+                .with(csrf())
+                .content(objectMapper.writeValueAsString(pilotData))
+                .contentType(MediaType.APPLICATION_JSON));
+
+        // Then
+        response.andExpect(status().isInternalServerError())
+                .andExpect(jsonPath("$.success", is(false)))
+                .andExpect(jsonPath("$.message", is("Unable to create and store the new pilot")));
+    }
+
+    @DisplayName("Create a new pilot / organization : Invalid JWT Token")
+    @Test
+    void givenPilotInformationAndInvalidJWT_whenCreateNewPilotInSystem_thenReturnInvalidToken() throws Exception {
+        // Given
+        PilotDTO pilot = PilotDTO.builder().name("TEST_PILOT").subGroups(List.of(PilotRole.ADMIN, PilotRole.USER)).build();
+
+        // Create the JWT
+        Jwt token = createMockJwtToken(null, null, null);
+
+        // Mock JWT authentication
+        JwtAuthenticationToken jwtAuthenticationToken = new JwtAuthenticationToken(token, List.of(new SimpleGrantedAuthority("ROLE_SUPER_ADMIN")));
+        SecurityContextHolder.getContext().setAuthentication(jwtAuthenticationToken);
+
+        // When
+        ResultActions response = mockMvc.perform(MockMvcRequestBuilders.post("/api/admin/pilot")
+                .with(csrf())
+                .content(objectMapper.writeValueAsString(pilot))
+                .contentType(MediaType.APPLICATION_JSON));
+
+        // Then
+        response.andExpect(status().isForbidden())
+                .andExpect(jsonPath("$.success", is(false)))
+                .andExpect(jsonPath("$.message", is("Token inserted is invalid. It does not contain any information about the user role or the pilot")));
+    }
+
+    @DisplayName("Assign a Role to Pilot : Success")
+    @Test
+    void givenPilotAndRole_whenAssignUserRoleToPilot_thenReturnSuccess() throws Exception {
+        // Given
+        String pilot = "SEW";
+        String role = "TEST_ROLE";
+
+        UserRoleDTO existingRole = UserRoleDTO.builder().name(role).pilotCode(PilotCode.SEW).pilotRole(PilotRole.ADMIN).build();
+
+        // Mock JWT authentication
+        JwtAuthenticationToken jwtAuthenticationToken = new JwtAuthenticationToken(jwt, List.of(new SimpleGrantedAuthority("ROLE_SUPER_ADMIN")));
+        SecurityContextHolder.getContext().setAuthentication(jwtAuthenticationToken);
+
+        // Mock service method
+        when(adminService.retrieveUserRole(anyString(), anyString())).thenReturn(existingRole);
+        when(adminService.assignUserRoleToPilot(anyString(), anyString(), anyString()))
+                .thenReturn(true);
+
+        // When
+        ResultActions response = mockMvc.perform(MockMvcRequestBuilders.put("/api/admin/pilot/{pilotCode}/assign/role/{role}", pilot, role)
+                .with(csrf())
+                .contentType(MediaType.APPLICATION_JSON));
+
+        // Then
+        response.andExpect(status().isOk())
+                .andExpect(jsonPath("$.success", is(true)))
+                .andExpect(jsonPath("$.message", is("User role assigned successfully to pilot")));
+    }
+
+    @DisplayName("Assign a Role to Pilot : Failed - Admin assigned role outside organization")
+    @Test
+    void givenDifferentPilotAndRole_whenAssignUserRoleToPilot_thenReturnSuccess() throws Exception {
+        // Given
+        String pilot = "CRF";
+        String role = "TEST_ROLE";
+
+        UserRoleDTO existingRole = UserRoleDTO.builder().name(role).pilotCode(PilotCode.SEW).pilotRole(PilotRole.ADMIN).build();
+
+        // Mock JWT authentication
+        JwtAuthenticationToken jwtAuthenticationToken = new JwtAuthenticationToken(jwt, List.of(new SimpleGrantedAuthority("ROLE_ADMIN")));
+        SecurityContextHolder.getContext().setAuthentication(jwtAuthenticationToken);
+
+        // Mock service method
+        when(adminService.retrieveUserRole(anyString(), anyString())).thenReturn(existingRole);
+        when(adminService.assignUserRoleToPilot(anyString(), anyString(), anyString()))
+                .thenReturn(true);
+
+        // When
+        ResultActions response = mockMvc.perform(MockMvcRequestBuilders.put("/api/admin/pilot/{pilotCode}/assign/role/{role}", pilot, role)
+                .with(csrf())
+                .contentType(MediaType.APPLICATION_JSON));
+
+        // Then
+        response.andExpect(status().isForbidden())
+                .andExpect(jsonPath("$.success", is(false)))
+                .andExpect(jsonPath("$.message", is("Unauthorized action")));
+    }
+
+    @DisplayName("Assign a Role to Pilot : Internal Server Error")
+    @Test
+    void givenPilotAndRole_whenAssignUserRoleToPilot_thenReturnInternalServerError() throws Exception {
+        // Given
+        String pilot = "SEW";
+        String role = "TEST_ROLE";
+
+        UserRoleDTO existingRole = UserRoleDTO.builder().name(role).pilotCode(PilotCode.SEW).pilotRole(PilotRole.ADMIN).build();
+
+        // Mock JWT authentication
+        JwtAuthenticationToken jwtAuthenticationToken = new JwtAuthenticationToken(jwt, List.of(new SimpleGrantedAuthority("ROLE_ADMIN")));
+        SecurityContextHolder.getContext().setAuthentication(jwtAuthenticationToken);
+
+        // Mock service method
+        when(adminService.retrieveUserRole(anyString(), anyString())).thenReturn(existingRole);
+        when(adminService.assignUserRoleToPilot(anyString(), anyString(), anyString()))
+                .thenReturn(false);
+
+        // When
+        ResultActions response = mockMvc.perform(MockMvcRequestBuilders.put("/api/admin/pilot/{pilotCode}/assign/role/{role}", pilot, role)
+                .with(csrf())
+                .contentType(MediaType.APPLICATION_JSON));
+
+        // Then
+        response.andExpect(status().isInternalServerError())
+                .andExpect(jsonPath("$.success", is(false)))
+                .andExpect(jsonPath("$.message", is("Unable to assign the user role to specified pilot")));
     }
 
     private Jwt createMockJwtToken(String userRole, String pilotRole, String pilotCode){

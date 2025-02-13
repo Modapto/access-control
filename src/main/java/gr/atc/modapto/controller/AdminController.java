@@ -2,20 +2,17 @@ package gr.atc.modapto.controller;
 
 import java.util.List;
 
+import gr.atc.modapto.dto.PilotDTO;
+import gr.atc.modapto.service.KeycloakSupportService;
+import jakarta.validation.Valid;
+import lombok.AllArgsConstructor;
 import org.apache.commons.lang3.StringUtils;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.security.core.annotation.AuthenticationPrincipal;
 import org.springframework.security.oauth2.jwt.Jwt;
-import org.springframework.web.bind.annotation.DeleteMapping;
-import org.springframework.web.bind.annotation.GetMapping;
-import org.springframework.web.bind.annotation.PathVariable;
-import org.springframework.web.bind.annotation.PostMapping;
-import org.springframework.web.bind.annotation.PutMapping;
-import org.springframework.web.bind.annotation.RequestBody;
-import org.springframework.web.bind.annotation.RequestMapping;
-import org.springframework.web.bind.annotation.RestController;
+import org.springframework.web.bind.annotation.*;
 
 import gr.atc.modapto.dto.UserDTO;
 import gr.atc.modapto.dto.UserRoleDTO;
@@ -29,12 +26,11 @@ import io.swagger.v3.oas.annotations.media.Schema;
 import io.swagger.v3.oas.annotations.responses.ApiResponse;
 import io.swagger.v3.oas.annotations.responses.ApiResponses;
 import io.swagger.v3.oas.annotations.security.SecurityRequirement;
-import lombok.AllArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 
 @RequestMapping("api/admin")
-@AllArgsConstructor
 @RestController
+@AllArgsConstructor
 @Slf4j
 public class AdminController {
     /**
@@ -428,6 +424,88 @@ public class AdminController {
             return new ResponseEntity<>(BaseResponse.error(UNAUTHORIZED_ACTION, USER_FORBIDDEN), HttpStatus.FORBIDDEN);
 
         return new ResponseEntity<>(BaseResponse.success(adminService.retrieveAllUsersByUserRole(jwt.getTokenValue(), userRole.toUpperCase()), "Users associated with the role retrieved successfully"), HttpStatus.OK);
+    }
+
+    /**
+     * Create a new Pilot in Keycloak
+     *
+     * @param jwt : JWT Token
+     * @return Success message or Failure Message
+     */
+    @Operation(summary = "Create a new Pilot / Organization", security = @SecurityRequirement(name = "bearerToken"))
+    @ApiResponses(value = {
+            @ApiResponse(responseCode = "201", description = "Pilot created successfully"),
+            @ApiResponse(responseCode = "400", description = "Invalid request: either credentials or token must be provided!"),
+            @ApiResponse(responseCode = "400", description = "Invalid input data"),
+            @ApiResponse(responseCode = "403", description = "Invalid authorization parameters. Check JWT or CSRF Token"),
+            @ApiResponse(responseCode = "403", description = "Token inserted is invalid. It does not contain any information about the user role or the pilot"),
+            @ApiResponse(responseCode = "409", description = "Pilot already exists in Keycloak"),
+            @ApiResponse(responseCode = "500", description = "Unable to create and store the new piloit")
+    })
+    @PreAuthorize("hasAuthority('ROLE_SUPER_ADMIN')")
+    @PostMapping("/pilot")
+    public ResponseEntity<BaseResponse<Void>> createNewPilotInSystem(@AuthenticationPrincipal Jwt jwt, @Valid @RequestBody PilotDTO pilotData) {
+        // Validate token proper format
+        String role = JwtUtils.extractPilotRole(jwt);
+        String pilot = JwtUtils.extractPilotCode(jwt);
+
+        // Check if JWT contains the proper information
+        if (StringUtils.isAnyBlank(role, pilot))
+            return new ResponseEntity<>(BaseResponse.error(INVALID_TOKEN), HttpStatus.FORBIDDEN);
+
+        // Create Pilot in Keycloak
+        if (adminService.createNewPilot(jwt.getTokenValue(), pilotData))
+            return new ResponseEntity<>(BaseResponse.success(null,"Pilot created successfully"), HttpStatus.CREATED);
+        else
+            return new ResponseEntity<>(BaseResponse.error("Unable to create and store the new pilot"), HttpStatus.INTERNAL_SERVER_ERROR);
+    }
+
+    /**
+     * Assign a User Role to a Pilot
+     *
+     * @param pilotCode : Pilot Code
+     * @param userRole  : User Role to assing
+     * @param jwt       : JWT Token
+     * @return Success message or Failure Message
+     */
+    @Operation(summary = "Assign User Role to specific Pilot / Organization", security = @SecurityRequirement(name = "bearerToken"))
+    @ApiResponses(value = {
+            @ApiResponse(responseCode = "201", description = "User role assigned successfully to pilot"),
+            @ApiResponse(responseCode = "400", description = "Invalid request: either credentials or token must be provided!"),
+            @ApiResponse(responseCode = "400", description = "Invalid / No input was given for requested resource"),
+            @ApiResponse(responseCode = "403", description = "Invalid authorization parameters. Check JWT or CSRF Token"),
+            @ApiResponse(responseCode = "403", description = "Token inserted is invalid. It does not contain any information about the user role or the pilot"),
+            @ApiResponse(responseCode = "403", description = "Unauthorized action"),
+            @ApiResponse(responseCode = "404", description = "Unable to retrieve requested data"),
+            @ApiResponse(responseCode = "500", description = "Unable to assign the user role to specified pilot")
+    })
+    @PreAuthorize("hasAnyAuthority('ROLE_SUPER_ADMIN', 'ROLE_ADMIN')")
+    @PutMapping("/pilot/{pilotCode}/assign/role/{userRole}")
+    public ResponseEntity<BaseResponse<Void>> assignUserRoleToPilot(@AuthenticationPrincipal Jwt jwt, @PathVariable String pilotCode, @PathVariable String userRole) {
+        // Validate token proper format
+        String role = JwtUtils.extractPilotRole(jwt);
+        String pilot = JwtUtils.extractPilotCode(jwt);
+
+        // Check if JWT contains the proper information
+        if (StringUtils.isAnyBlank(role, pilot))
+            return new ResponseEntity<>(BaseResponse.error(INVALID_TOKEN), HttpStatus.FORBIDDEN);
+
+        // Retrieve Role
+        UserRoleDTO existingRole = adminService.retrieveUserRole(jwt.getTokenValue(), userRole.toUpperCase());
+
+        // Validate that User Role is not type of 'Super-Admin'
+        if (existingRole.getPilotRole() != null && existingRole.getPilotRole().equals(PilotRole.SUPER_ADMIN))
+            return new ResponseEntity<>(BaseResponse.error(UNAUTHORIZED_ACTION, "Role of type 'SUPER_ADMIN' can not be assigned to a pilot"), HttpStatus.FORBIDDEN);
+
+        // Validate that Admin can only assign a role inside his/her organization
+        if (existingRole.getPilotCode() != null && role.equalsIgnoreCase(PilotRole.ADMIN.toString()) && !pilotCode.equalsIgnoreCase(existingRole.getPilotCode().toString()) && !pilotCode.equalsIgnoreCase(pilot))
+            return new ResponseEntity<>(BaseResponse.error(UNAUTHORIZED_ACTION, "User of role 'ADMIN' can only assign a role only inside their organization"), HttpStatus.FORBIDDEN);
+
+        // Create Pilot in Keycloak
+        if (adminService.assignUserRoleToPilot(userRole.toUpperCase(), pilotCode.toUpperCase(), jwt.getTokenValue()))
+            return new ResponseEntity<>(BaseResponse.success(null,"User role assigned successfully to pilot"), HttpStatus.OK);
+        else
+            return new ResponseEntity<>(BaseResponse.error("Unable to assign the user role to specified pilot"), HttpStatus.INTERNAL_SERVER_ERROR);
     }
 
 }

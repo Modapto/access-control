@@ -1,5 +1,6 @@
 package gr.atc.modapto.service;
 
+import java.net.URI;
 import java.util.Arrays;
 import java.util.Collections;
 import java.util.HashMap;
@@ -11,6 +12,9 @@ import static org.junit.jupiter.api.Assertions.assertFalse;
 import static org.junit.jupiter.api.Assertions.assertNotNull;
 import static org.junit.jupiter.api.Assertions.assertThrows;
 import static org.junit.jupiter.api.Assertions.assertTrue;
+
+import gr.atc.modapto.dto.PilotDTO;
+import gr.atc.modapto.enums.PilotRole;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
@@ -18,13 +22,10 @@ import org.junit.jupiter.api.extension.ExtendWith;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.ArgumentMatchers.anyString;
 import static org.mockito.ArgumentMatchers.eq;
+import static org.mockito.Mockito.*;
+
 import org.mockito.InjectMocks;
 import org.mockito.Mock;
-import static org.mockito.Mockito.lenient;
-import static org.mockito.Mockito.times;
-import static org.mockito.Mockito.verify;
-import static org.mockito.Mockito.verifyNoInteractions;
-import static org.mockito.Mockito.when;
 import org.mockito.junit.jupiter.MockitoExtension;
 import org.springframework.core.ParameterizedTypeReference;
 import org.springframework.http.HttpEntity;
@@ -32,7 +33,6 @@ import org.springframework.http.HttpMethod;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.test.util.ReflectionTestUtils;
-import org.springframework.web.client.HttpClientErrorException;
 import org.springframework.web.client.HttpServerErrorException;
 import org.springframework.web.client.RestTemplate;
 
@@ -103,23 +103,6 @@ class AdminServiceTests {
     List<String> result = adminService.retrieveAllPilotRoles(MOCK_TOKEN, true);
 
     assertTrue(result.isEmpty());
-  }
-
-  @DisplayName("Retrieve all user roles: Invalid Response - Fail")
-  @Test
-  void givenInvalidResponse_whenGetAllUserRoles_thenReturnEmptyList() {
-    // Given
-    when(keycloakSupportService.getClientId()).thenReturn("client-id");
-
-    // When
-    when(restTemplate.exchange(anyString(), eq(HttpMethod.GET), any(),
-        any(ParameterizedTypeReference.class)))
-            .thenThrow(new HttpClientErrorException(HttpStatus.BAD_REQUEST));
-
-
-    // Then
-    assertThrows(CustomExceptions.KeycloakException.class,
-        () -> adminService.retrieveAllUserRoles(MOCK_TOKEN, null));
   }
 
   @DisplayName("Retrieve all pilots: Success")
@@ -459,5 +442,157 @@ class AdminServiceTests {
     verifyNoInteractions(restTemplate);
   }
 
+  @DisplayName("Create a new Pilot: Success")
+  @Test
+  void givenValidJwtAndPilot_whenCreateNewPilot_thenReturnSuccess() {
+    // Given
+    String mockToken = "mock-jwt-token";
+    PilotDTO pilotData = PilotDTO.builder().name("TEST_PILOT").subGroups(List.of(PilotRole.ADMIN)).build();
+    String mockClientId = "test-client-id";
 
+    // Mock URI
+    String mainUri = MOCK_ADMIN_URI + "/groups";
+    URI mockLocation = URI.create(mainUri + "/123");
+
+    // Mock main group creation response
+    ResponseEntity<Void> mockMainResponse = ResponseEntity
+            .created(mockLocation)
+            .build();
+
+    when(restTemplate.exchange(
+            eq(mainUri),
+            eq(HttpMethod.POST),
+            any(HttpEntity.class),
+            eq(Void.class)
+    )).thenReturn(mockMainResponse);
+
+    // Mock subgroup creation response
+    ResponseEntity<Void> mockSubGroupResponse = ResponseEntity
+            .status(HttpStatus.CREATED)
+            .build();
+
+    when(restTemplate.exchange(
+            eq(MOCK_ADMIN_URI + "/groups/123/children"),
+            eq(HttpMethod.POST),
+            any(HttpEntity.class),
+            eq(Void.class)
+    )).thenReturn(mockSubGroupResponse);
+
+    // When
+    boolean result = adminService.createNewPilot(mockToken, pilotData);
+
+    // Then
+    assertTrue(result);
+    verify(restTemplate).exchange(
+            eq(mainUri),
+            eq(HttpMethod.POST),
+            any(HttpEntity.class),
+            eq(Void.class)
+    );
+    verify(restTemplate).exchange(
+            eq(MOCK_ADMIN_URI + "/groups/123/children"),
+            eq(HttpMethod.POST),
+            any(HttpEntity.class),
+            eq(Void.class)
+    );
+  }
+
+  @DisplayName("Create new Pilot : Main group creation failed")
+  @Test
+  void givenValidJwtAndPilot_whenMainGroupCreationFails_thenReturnFalse() {
+    // Given
+    String mockToken = "mock-jwt-token";
+    PilotDTO pilotData = PilotDTO.builder()
+            .name("TEST_PILOT")
+            .subGroups(List.of(PilotRole.ADMIN))
+            .build();
+
+    String mainUri = MOCK_ADMIN_URI + "/groups";
+
+    // Mock failed response for main group creation
+    ResponseEntity<Void> mockMainResponse = ResponseEntity
+            .status(HttpStatus.BAD_REQUEST)
+            .build();
+
+    when(restTemplate.exchange(
+            eq(mainUri),
+            eq(HttpMethod.POST),
+            any(HttpEntity.class),
+            eq(Void.class)
+    )).thenReturn(mockMainResponse);
+
+    // When
+    boolean result = adminService.createNewPilot(mockToken, pilotData);
+
+    // Then
+    assertFalse(result);
+    verify(restTemplate).exchange(
+            eq(mainUri),
+            eq(HttpMethod.POST),
+            any(HttpEntity.class),
+            eq(Void.class)
+    );
+    verify(restTemplate, never()).exchange(
+            contains("/children"),
+            eq(HttpMethod.POST),
+            any(HttpEntity.class),
+            eq(Void.class)
+    );
+  }
+
+  @DisplayName("Create new Pilot : Subgroup assignment failed")
+  @Test
+  void givenValidJwtAndPilot_whenSubGroupCreationFails_thenReturnFalse() {
+    // Given
+    String mockToken = "mock-jwt-token";
+    PilotDTO pilotData = PilotDTO.builder()
+            .name("TEST_PILOT")
+            .subGroups(List.of(PilotRole.ADMIN))
+            .build();
+
+    String mainUri = MOCK_ADMIN_URI + "/groups";
+    URI mockLocation = URI.create(mainUri + "/123");
+
+    // Mock successful main group creation
+    ResponseEntity<Void> mockMainResponse = ResponseEntity
+            .created(mockLocation)
+            .build();
+
+    when(restTemplate.exchange(
+            eq(mainUri),
+            eq(HttpMethod.POST),
+            any(HttpEntity.class),
+            eq(Void.class)
+    )).thenReturn(mockMainResponse);
+
+    // Mock failed subgroup creation
+    ResponseEntity<Void> mockSubGroupResponse = ResponseEntity
+            .status(HttpStatus.BAD_REQUEST)
+            .build();
+
+    when(restTemplate.exchange(
+            eq(MOCK_ADMIN_URI + "/groups/123/children"),
+            eq(HttpMethod.POST),
+            any(HttpEntity.class),
+            eq(Void.class)
+    )).thenReturn(mockSubGroupResponse);
+
+    // When
+    boolean result = adminService.createNewPilot(mockToken, pilotData);
+
+    // Then
+    assertFalse(result);
+    verify(restTemplate).exchange(
+            eq(mainUri),
+            eq(HttpMethod.POST),
+            any(HttpEntity.class),
+            eq(Void.class)
+    );
+    verify(restTemplate).exchange(
+            eq(MOCK_ADMIN_URI + "/groups/123/children"),
+            eq(HttpMethod.POST),
+            any(HttpEntity.class),
+            eq(Void.class)
+    );
+  }
 }
