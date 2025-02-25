@@ -104,7 +104,6 @@ public class SecurityConfig {
                                      .map(String::trim)
                                      .toList();
 
-    log.info("CORS Domains: {}", corsDomains);
     CorsConfiguration configuration = new CorsConfiguration();
     configuration.setAllowedOrigins(corsDomains);
     configuration.setAllowedMethods(Arrays.asList("GET", "POST", "PUT", "DELETE", "PATCH", "OPTIONS"));
