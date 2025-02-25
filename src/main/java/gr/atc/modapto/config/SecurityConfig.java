@@ -29,7 +29,7 @@ import gr.atc.modapto.keycloak.UnauthorizedEntryPoint;
 public class SecurityConfig {
 
   @Value("${spring.security.cors.domains}")
-  private List<String> corsDomains;
+  private String corsDomainsRaw;
 
   /**
    * Initialize and Configure Security Filter Chain of HTTP connection
@@ -97,6 +97,11 @@ public class SecurityConfig {
    */
   @Bean
   public CorsConfigurationSource corsConfigurationSource() {
+    // Split and trim domains
+    List<String> corsDomains = Arrays.stream(corsDomainsRaw.split(","))
+                                     .map(String::trim)
+                                     .toList();
+                                     
     CorsConfiguration configuration = new CorsConfiguration();
     configuration.setAllowedOrigins(corsDomains);
     configuration.setAllowedMethods(Arrays.asList("GET", "POST", "PUT", "DELETE", "PATCH", "OPTIONS"));
