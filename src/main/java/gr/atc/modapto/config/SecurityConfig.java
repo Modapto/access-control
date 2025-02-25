@@ -22,10 +22,12 @@ import org.springframework.web.cors.UrlBasedCorsConfigurationSource;
 import gr.atc.modapto.filter.CsrfCookieFilter;
 import gr.atc.modapto.keycloak.JwtAuthConverter;
 import gr.atc.modapto.keycloak.UnauthorizedEntryPoint;
+import lombok.extern.slf4j.Slf4j;
 
 @Configuration
 @EnableWebSecurity
 @EnableMethodSecurity
+@Slf4j
 public class SecurityConfig {
 
   @Value("${spring.security.cors.domains}")
@@ -101,7 +103,8 @@ public class SecurityConfig {
     List<String> corsDomains = Arrays.stream(corsDomainsRaw.split(","))
                                      .map(String::trim)
                                      .toList();
-                                     
+
+    log.info("CORS Domains: {}", corsDomains);
     CorsConfiguration configuration = new CorsConfiguration();
     configuration.setAllowedOrigins(corsDomains);
     configuration.setAllowedMethods(Arrays.asList("GET", "POST", "PUT", "DELETE", "PATCH", "OPTIONS"));
