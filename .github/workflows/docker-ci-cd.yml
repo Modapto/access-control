@@ -66,10 +66,14 @@ jobs:
             # Login to GitHub Container Registry
             echo "${{ secrets.CI_TOKEN }}" | docker login ghcr.io -u ${{ github.actor }} --password-stdin
             
-            # Deploy new Image
+            # Deploy new Image for Dev
             cd /root/modapto/system-deployment
             docker compose pull ${{ env.DOCKER_IMAGE }}
             docker compose up -d --no-deps ${{ env.DOCKER_IMAGE }}
+
+            # Deploy new Image for FFT
+            cd /root/modapto/fft-deployment
+            docker compose up -d --no-deps ${{ env.DOCKER_IMAGE }}-fft
 
             # Remove unused images
             docker image prune -f
