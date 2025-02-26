@@ -181,9 +181,11 @@ public class UserRepresentationDTO {
       keycloakUser.getAttributes().put(PILOT_ROLE, List.of(user.getPilotRole().toString()));
     }
 
-    if (user.getPilotCode() != null && user.getPilotCode() != PilotCode.ALL) {
-      String pilotType = "/" + user.getPilotCode() + "/" + user.getPilotRole();
-      keycloakUser.setGroups(List.of("/" + user.getPilotCode(), pilotType));
+    if (user.getPilotCode() != null) {
+      if (user.getPilotCode() != PilotCode.ALL) {
+        String pilotType = "/" + user.getPilotCode() + "/" + user.getPilotRole();
+        keycloakUser.setGroups(List.of("/" + user.getPilotCode(), pilotType));
+      }
       keycloakUser.getAttributes().put(PILOT_CODE, List.of(user.getPilotCode().toString()));
     }
   }
