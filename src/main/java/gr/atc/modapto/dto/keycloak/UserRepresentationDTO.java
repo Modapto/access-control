@@ -9,6 +9,7 @@ import com.fasterxml.jackson.annotation.JsonProperty;
 import gr.atc.modapto.dto.UserDTO;
 import gr.atc.modapto.enums.PilotCode;
 import gr.atc.modapto.enums.PilotRole;
+import io.swagger.v3.oas.annotations.media.Schema;
 import lombok.AllArgsConstructor;
 import lombok.Builder;
 import lombok.Data;
@@ -202,8 +203,7 @@ public class UserRepresentationDTO {
     // Set activation token and expiration time as attributes - Two cases can be observed: 1) Create
     // a new user 2) Activate user
     if (existingUser == null && user.getActivationExpiry() != null
-        && user.getActivationToken() != null && !user.isTokenFlagRaised()) { // Creation of a new
-                                                                             // user
+        && user.getActivationToken() != null && !user.isTokenFlagRaised()) { // Creation of a new  usercase
       keycloakUser.getAttributes().put(ACTIVATION_TOKEN, List.of(user.getActivationToken()));
       keycloakUser.getAttributes().put(ACTIVATION_EXPIRY, List.of(user.getActivationExpiry()));
     } else if (user.isTokenFlagRaised() && user.getActivationToken() != null

@@ -83,7 +83,6 @@ public class UserManagerService implements IUserManagerService {
   private static final String ERROR_MESSAGE_FIELD = "errorMessage";
 
   // Arrays of realm-manage roles
-  // Arrays of realm-manage roles
   private static final String REALM_MANAGEMENT_CLIENT = "realm-management";
   private static final String REALM_CLIENT = "realm";
   private static final String VIEW_USERS = "view-users";
@@ -115,49 +114,74 @@ public class UserManagerService implements IUserManagerService {
   }
 
   /**
-   * Authenticate the User Credentials in Keycloak and return Token Used also to refresh user's
-   * token
+   * Authenticate the User Credentials in Keycloak and return JWT Token
    *
-   * @param refreshToken Token to refresh user's token (Null if not applicable)
-   * @param credentials User email and password
+   * @param credentials : User email and password
    * @return AuthenticationResponseDTO
    */
-  @Override
-  public AuthenticationResponseDTO authenticate(CredentialsDTO credentials, String refreshToken) {
+  public AuthenticationResponseDTO authenticate(CredentialsDTO credentials) {
     try {
       HttpHeaders headers = new HttpHeaders();
       headers.setContentType(MediaType.APPLICATION_FORM_URLENCODED);
 
-      HttpEntity<MultiValueMap<String, String>> entity =
-          getMultiValueMapHttpEntity(credentials, refreshToken, headers);
+      HttpEntity<MultiValueMap<String, String>> entity = getMultiValueMapHttpEntity(credentials, null, headers);
 
-      ResponseEntity<Map<String, Object>> response = restTemplate.exchange(tokenUri,
-          HttpMethod.POST, entity, new ParameterizedTypeReference<>() {});
+      ResponseEntity<Map<String, Object>> response = restTemplate.exchange(
+              tokenUri, HttpMethod.POST, entity, new ParameterizedTypeReference<>() {
+              });
 
-      if (response.getStatusCode().is2xxSuccessful()) {
-        Map<String, Object> responseBody = response.getBody();
-        if (responseBody == null || responseBody.get(TOKEN) == null) {
-          return null;
-        }
+      return parseAuthenticationResponse(response);
 
-        return AuthenticationResponseDTO.builder().accessToken((String) responseBody.get(TOKEN))
-            .expiresIn((Integer) responseBody.get("expires_in"))
-            .tokenType((String) responseBody.get("token_type"))
-            .refreshToken((String) responseBody.get(GRANT_TYPE_REFRESH_TOKEN))
-            .refreshExpiresIn((Integer) responseBody.get("refresh_expires_in")).build();
-      }
-
-      // Return null object
-      return null;
-    } catch (HttpServerErrorException e) {
-      log.error("HTTP server error during authentication process: {}, Response body: {}",
-          e.getMessage(), e.getResponseBodyAsString(), e);
-      throw new KeycloakException("HTTP server error during authentication process", e);
     } catch (RestClientException e) {
-      log.error("Unable to retrieve token information from Keycloak. Error: {}", e.getMessage());
-      throw new InvalidAuthenticationCredentialsException(
-          "Unable to retrieve token information from Keycloak");
+      log.error("Authentication failed: {}", e.getMessage(), e);
+      throw new InvalidAuthenticationCredentialsException("Invalid credentials or authorization server error");
     }
+  }
+
+  /**
+   * Generate new refresh token for user
+   *
+   * @param refreshToken : Refresh Token
+   * @return AuthenticationResponseDTO
+   */
+  public AuthenticationResponseDTO refreshToken(String refreshToken) {
+    try {
+      HttpHeaders headers = new HttpHeaders();
+      headers.setContentType(MediaType.APPLICATION_FORM_URLENCODED);
+
+      HttpEntity<MultiValueMap<String, String>> entity = getMultiValueMapHttpEntity(null, refreshToken, headers);
+
+      ResponseEntity<Map<String, Object>> response = restTemplate.exchange(
+              tokenUri, HttpMethod.POST, entity, new ParameterizedTypeReference<>() {
+              });
+
+      return parseAuthenticationResponse(response);
+
+    } catch (RestClientException e) {
+      log.error("Token refresh failed: {}", e.getMessage(), e);
+      throw new InvalidAuthenticationCredentialsException("Refresh token is invalid or expired");
+    }
+  }
+
+  /**
+   * Parse the authentication response and return an AuthenticationResponseDTO.
+   *
+   * @param response : Response from Keycloak
+   */
+  private AuthenticationResponseDTO parseAuthenticationResponse(ResponseEntity<Map<String, Object>> response) {
+    return Optional.ofNullable(response)
+            .filter(resp -> resp.getStatusCode().is2xxSuccessful())
+            .map(ResponseEntity::getBody)
+            .filter(body -> body.get(TOKEN) != null)
+            .map(body -> AuthenticationResponseDTO.builder()
+                    .accessToken((String) body.get(TOKEN))
+                    .expiresIn((Integer) body.get("expires_in"))
+                    .tokenType((String) body.get("token_type"))
+                    .refreshToken((String) body.get(GRANT_TYPE_REFRESH_TOKEN))
+                    .refreshExpiresIn((Integer) body.get("refresh_expires_in"))
+                    .build())
+            .orElseThrow(() -> new InvalidAuthenticationCredentialsException(
+                    "No or invalid response received from Resource Server while authenticating user"));
   }
 
   /**
@@ -366,7 +390,7 @@ public class UserManagerService implements IUserManagerService {
 
     // If user can not authenticate with given current password then throw error
     AuthenticationResponseDTO userAuthentication =
-        authenticate(new CredentialsDTO(user.getEmail(), passwords.getCurrentPassword()), null);
+        authenticate(new CredentialsDTO(user.getEmail(), passwords.getCurrentPassword()));
     if (userAuthentication == null)
       throw new DataRetrievalException("Provided current password is not correct");
 
@@ -1066,7 +1090,7 @@ public class UserManagerService implements IUserManagerService {
    * 
    * @param existingUser : User Representation in Keycloak
    * @param client : Client Name
-   * @token : JWT Token Value
+   * @param token : JWT Token Value
    * @return True on Success, False on Error
    */
   private boolean deleteUserRoleMappingsByClient(UserRepresentationDTO existingUser, String client,

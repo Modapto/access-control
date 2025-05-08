@@ -96,7 +96,7 @@ class UserManagerControllerTests {
   @Test
   void givenUserCredentials_whenAuthenticate_thenReturnAccessTokens() throws Exception {
     // Given
-    given(userManagerService.authenticate(credentials, null)).willReturn(authenticationResponse);
+    given(userManagerService.authenticate(any(CredentialsDTO.class))).willReturn(authenticationResponse);
 
     // When
     ResultActions response =
@@ -114,7 +114,7 @@ class UserManagerControllerTests {
   @Test
   void givenRefreshToken_whenRefreshToken_thenReturnNewAccessTokens() throws Exception {
     // Given
-    given(userManagerService.authenticate(null, "test_token")).willReturn(authenticationResponse);
+    given(userManagerService.refreshToken(anyString())).willReturn(authenticationResponse);
 
     // When
     ResultActions response = mockMvc.perform(post("/api/users/refresh-token")
@@ -146,7 +146,7 @@ class UserManagerControllerTests {
   @Test
   void givenWrongCredentials_whenAuthenticate_thenReturnUnauthorized() throws Exception {
     // Given
-    given(userManagerService.authenticate(credentials, null)).willReturn(null);
+    given(userManagerService.authenticate(credentials)).willReturn(null);
 
     // When
     ResultActions response =
@@ -433,7 +433,7 @@ class UserManagerControllerTests {
         .andExpect(jsonPath("$.data[0].email", is("test@test.com")));
   }
 
-  @DisplayName("Fetch User IDs per Pilot: Success")
+  @DisplayName("Fetch Users per Pilot: Success")
   @Test
   void givenValidJwt_whenGetUserIdsPerPilot_thenReturnListOfUserIds() throws Exception {
     // Given
@@ -447,15 +447,15 @@ class UserManagerControllerTests {
 
     // When
     ResultActions response =
-        mockMvc.perform(get("/api/users/ids/pilot/SEW").contentType(MediaType.APPLICATION_JSON));
+        mockMvc.perform(get("/api/users/pilot/SEW").contentType(MediaType.APPLICATION_JSON));
 
     // Then
     response.andExpect(status().isOk()).andExpect(jsonPath("$.success", is(true)))
-        .andExpect(jsonPath("$.message", is("User IDs for pilot SEW retrieved successfully")))
-        .andExpect(jsonPath("$.data[0]", is("12345")));
+        .andExpect(jsonPath("$.message", is("Users for pilot SEW retrieved successfully")))
+        .andExpect(jsonPath("$.data[0].userId", is("12345")));
   }
 
-  @DisplayName("Fetch User IDs By Role: Success")
+  @DisplayName("Fetch Users By Role: Success")
   @Test
   void givenValidJwt_whenGetAllUserIdsByUserRole_thenReturnListOfUserIds() throws Exception {
     // Given
@@ -468,14 +468,13 @@ class UserManagerControllerTests {
 
     // When
     ResultActions response = mockMvc
-        .perform(get("/api/users/ids/role/OPERATOR").contentType(MediaType.APPLICATION_JSON));
+        .perform(get("/api/users/role/OPERATOR").contentType(MediaType.APPLICATION_JSON));
 
     // Then
     response.andExpect(status().isOk()).andExpect(jsonPath("$.success", is(true)))
-        .andExpect(jsonPath("$.message", is("User IDs for role OPERATOR retrieved successfully")))
-        .andExpect(jsonPath("$.data[0]", is("12345")));
+        .andExpect(jsonPath("$.message", is("Users for role OPERATOR retrieved successfully")))
+        .andExpect(jsonPath("$.data[0].userId", is("12345")));
   }
-
 
   @DisplayName("Fetch User by ID: Success")
   @Test

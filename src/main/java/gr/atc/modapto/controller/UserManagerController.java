@@ -69,7 +69,7 @@ public class UserManagerController {
   public ResponseEntity<BaseResponse<AuthenticationResponseDTO>> authenticateUser(
       @Valid @RequestBody CredentialsDTO credentials) {
 
-    AuthenticationResponseDTO response = userManagerService.authenticate(credentials, null);
+    AuthenticationResponseDTO response = userManagerService.authenticate(credentials);
 
     if (response != null) {
       return new ResponseEntity<>(
@@ -100,7 +100,7 @@ public class UserManagerController {
   public ResponseEntity<BaseResponse<AuthenticationResponseDTO>> refreshToken(
       @RequestParam(name = "token") String refreshToken) {
 
-    AuthenticationResponseDTO response = userManagerService.authenticate(null, refreshToken);
+    AuthenticationResponseDTO response = userManagerService.refreshToken(refreshToken);
 
     if (response != null) {
       return new ResponseEntity<>(
@@ -438,9 +438,7 @@ public class UserManagerController {
   @Operation(summary = "Retrieve all users from Keycloak",
       security = @SecurityRequirement(name = "bearerToken"))
   @ApiResponses(value = {
-      @ApiResponse(responseCode = "200", description = "Users retrieved successfully",
-          content = {@Content(mediaType = "application/json",
-              schema = @Schema(implementation = UserDTO.class))}),
+      @ApiResponse(responseCode = "200", description = "Users retrieved successfully"),
       @ApiResponse(responseCode = "400",
           description = "Invalid request: Either credentials or token must be provided!"),
       @ApiResponse(responseCode = "400", description = "An unexpected error occured"),
@@ -448,7 +446,6 @@ public class UserManagerController {
           description = "Invalid authorization parameters. Check JWT or CSRF Token"),
       @ApiResponse(responseCode = "403",
           description = "Token inserted is invalid. It does not contain any information about the pilot")})
-  @PreAuthorize("hasAnyAuthority('ROLE_SUPER_ADMIN', 'ROLE_ADMIN')")
   @GetMapping
   public ResponseEntity<BaseResponse<List<UserDTO>>> fetchUsers(@AuthenticationPrincipal Jwt jwt) {
     String pilot = JwtUtils.extractPilotCode(jwt);
@@ -473,15 +470,12 @@ public class UserManagerController {
   @Operation(summary = "Search user by ID from Keycloak",
       security = @SecurityRequirement(name = "bearerToken"))
   @ApiResponses(value = {
-      @ApiResponse(responseCode = "200", description = "User retrieved successfully",
-          content = {@Content(mediaType = "application/json",
-              schema = @Schema(implementation = UserDTO.class))}),
+      @ApiResponse(responseCode = "200", description = "User retrieved successfully"),
       @ApiResponse(responseCode = "400",
           description = "Invalid request: Either credentials or token must be provided!"),
       @ApiResponse(responseCode = "400", description = "An unexpected error occured"),
       @ApiResponse(responseCode = "403",
           description = "Invalid authorization parameters. Check JWT or CSRF Token"),})
-  @PreAuthorize("hasAnyAuthority('ROLE_SUPER_ADMIN', 'ROLE_ADMIN')")
   @GetMapping("/search")
   public ResponseEntity<BaseResponse<UserDTO>> fetchUser(@RequestParam String userId,
       @AuthenticationPrincipal Jwt jwt) {
@@ -545,10 +539,10 @@ public class UserManagerController {
    * @param jwt: JWT Token
    * @return List<UserDTO>
    */
-  @Operation(summary = "Retrieve all user IDs for a specific pilot from Keycloak",
+  @Operation(summary = "Retrieve all users for a specific pilot / organization",
       security = @SecurityRequirement(name = "bearerToken"))
   @ApiResponses(
-      value = {@ApiResponse(responseCode = "200", description = "User IDs retrieved successfully"),
+      value = {@ApiResponse(responseCode = "200", description = "Users for pilot {pilotCode} retrieved successfully"),
           @ApiResponse(responseCode = "400",
               description = "Invalid request: Either credentials or token must be provided!"),
           @ApiResponse(responseCode = "400", description = "An unexpected error occured"),
@@ -556,28 +550,28 @@ public class UserManagerController {
               description = "Invalid authorization parameters. Check JWT or CSRF Token"),
           @ApiResponse(responseCode = "500",
               description = "Unable to locate requested group ID in Keycloak")})
-  @GetMapping("/ids/pilot/{pilotCode}")
-  public ResponseEntity<BaseResponse<List<String>>> getAllUserIdsByPilotCode(
+  @GetMapping("/pilot/{pilotCode}")
+  public ResponseEntity<BaseResponse<List<UserDTO>>> getAllUsersByPilotCode(
       @AuthenticationPrincipal Jwt jwt, @PathVariable String pilotCode) {
     List<UserDTO> users =
         userManagerService.fetchUsersByPilotCode(pilotCode.toUpperCase(), jwt.getTokenValue());
     return new ResponseEntity<>(
-        BaseResponse.success(users.stream().map(UserDTO::getUserId).toList(),
-            "User IDs for pilot " + pilotCode + " retrieved successfully"),
+        BaseResponse.success(users,
+            "Users for pilot " + pilotCode + " retrieved successfully"),
         HttpStatus.OK);
   }
 
   /**
-   * Retrieve all user IDs from Keycloak filtered by a specific User Role
+   * Retrieve all users from Keycloak filtered by a specific User Role
    *
    * @param jwt: JWT Token
    * @param userRole : User Role
    * @return List<UserDTO>
    */
-  @Operation(summary = "Retrieve all user IDs per role from Keycloak",
+  @Operation(summary = "Retrieve all users with a specific user role inside the organization",
       security = @SecurityRequirement(name = "bearerToken"))
   @ApiResponses(value = {
-      @ApiResponse(responseCode = "200", description = "User IDs for role retrieved successfully"),
+      @ApiResponse(responseCode = "200", description = "Users for role {userRole} retrieved successfully"),
       @ApiResponse(responseCode = "400",
           description = "Invalid request: Either credentials or token must be provided!"),
       @ApiResponse(responseCode = "400", description = "An unexpected error occured"),
@@ -585,14 +579,14 @@ public class UserManagerController {
           description = "Invalid authorization parameters. Check JWT or CSRF Token"),
       @ApiResponse(responseCode = "500",
           description = "Unable to locate requested client ID in Keycloak")})
-  @GetMapping("/ids/role/{userRole}")
-  public ResponseEntity<BaseResponse<List<String>>> getAllUserIdsByUserRole(
+  @GetMapping("/role/{userRole}")
+  public ResponseEntity<BaseResponse<List<UserDTO>>> getAllUsersByUserRole(
       @AuthenticationPrincipal Jwt jwt, @PathVariable String userRole) {
     List<UserDTO> users =
         userManagerService.fetchUsersByRole(userRole.toUpperCase(), jwt.getTokenValue());
     return new ResponseEntity<>(
-        BaseResponse.success(users.stream().map(UserDTO::getUserId).toList(),
-            "User IDs for role " + userRole + " retrieved successfully"),
+        BaseResponse.success(users,
+            "Users for role " + userRole + " retrieved successfully"),
         HttpStatus.OK);
   }
 

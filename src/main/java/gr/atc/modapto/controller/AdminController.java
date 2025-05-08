@@ -3,7 +3,6 @@ package gr.atc.modapto.controller;
 import java.util.List;
 
 import gr.atc.modapto.dto.PilotDTO;
-import gr.atc.modapto.service.KeycloakSupportService;
 import jakarta.validation.Valid;
 import lombok.AllArgsConstructor;
 import org.apache.commons.lang3.StringUtils;

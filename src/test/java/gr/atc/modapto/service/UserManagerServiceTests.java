@@ -118,7 +118,7 @@ class UserManagerServiceTests {
     when(restTemplate.exchange(eq(MOCK_TOKEN_URI), eq(HttpMethod.POST), any(),
         any(ParameterizedTypeReference.class))).thenReturn(mockResponse);
 
-    AuthenticationResponseDTO result = userManagerService.authenticate(credentials, null);
+    AuthenticationResponseDTO result = userManagerService.authenticate(credentials);
 
     // Then
     assertNotNull(result);
@@ -139,7 +139,7 @@ class UserManagerServiceTests {
 
     // When - Then
     assertThrows(CustomExceptions.InvalidAuthenticationCredentialsException.class,
-        () -> userManagerService.authenticate(credentials, null));
+        () -> userManagerService.authenticate(credentials));
   }
 
   @DisplayName("Authenticate user: Success with refresh token")
@@ -162,7 +162,7 @@ class UserManagerServiceTests {
     when(restTemplate.exchange(eq(MOCK_TOKEN_URI), eq(HttpMethod.POST), any(),
         any(ParameterizedTypeReference.class))).thenReturn(mockResponse);
 
-    AuthenticationResponseDTO result = userManagerService.authenticate(null, refreshToken);
+    AuthenticationResponseDTO result = userManagerService.refreshToken(refreshToken);
 
     // Then
     assertNotNull(result);

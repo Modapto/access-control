@@ -10,7 +10,9 @@ import gr.atc.modapto.dto.UserDTO;
 import gr.atc.modapto.dto.keycloak.UserRepresentationDTO;
 
 public interface IUserManagerService {
-  AuthenticationResponseDTO authenticate(CredentialsDTO credentials, String refreshToken);
+  AuthenticationResponseDTO authenticate(CredentialsDTO credentials);
+
+  AuthenticationResponseDTO refreshToken(String refreshToken);
 
   String createUser(UserDTO userDTO, String token);
 

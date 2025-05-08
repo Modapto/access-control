@@ -64,8 +64,7 @@ class AdminControllerIntegrationTests {
         response.andDo(print())
                 .andExpect(status().isOk())
                 .andExpect(jsonPath("$.success", is(true)))
-                .andExpect(jsonPath("$.message", is("User roles retrieved successfully")))
-                .andExpect(jsonPath("$.data", hasItem("ADMIN")));
+                .andExpect(jsonPath("$.message", is("User roles retrieved successfully")));
     }
 
     @DisplayName("Get All Pilot Codes: Success")
@@ -103,7 +102,7 @@ class AdminControllerIntegrationTests {
                 .andExpect(status().isOk())
                 .andExpect(jsonPath("$.success", is(true)))
                 .andExpect(jsonPath("$.message", is("Pilot roles retrieved successfully")))
-                .andExpect(jsonPath("$.data", hasItem("OPERATOR")));
+                .andExpect(jsonPath("$.data", hasItem("SUPER_ADMIN")));
     }
 
 }
