@@ -119,6 +119,7 @@ public class EmailService implements IEmailService {
       helper.setSubject(subject);
       helper.setText(text, true);
       javaMailSender.send(message);
+      log.info("Email sent to: {}", recipientAddress);
     } catch (MessagingException e) {
       log.error("Unable to send message to email: {} - Error: {}", recipientAddress, e.getMessage());
     }

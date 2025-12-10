@@ -54,6 +54,7 @@ public class UnauthorizedEntryPoint implements AuthenticationEntryPoint {
         // Define paths to exclude from unauthorized handling
         return path.equals("/api/users/refresh-token") ||
                 path.equals("/api/users/authenticate") ||
-                path.equals("/api/users/activate");
+                path.equals("/api/users/activate") ||
+                path.equals("/api/users/forgot-password");
     }
 }
